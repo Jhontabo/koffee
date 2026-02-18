@@ -190,7 +190,7 @@ class _RegistroFormState extends State<RegistroForm>
   Widget _buildRojoForm() {
     return Form(
       key: _formKeyRojo,
-      child: Padding(
+      child: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -221,7 +221,7 @@ class _RegistroFormState extends State<RegistroForm>
               },
             ),
             const SizedBox(height: 16),
-            _buildFincaFieldRojo(),
+            _buildFincaFieldRojoWithButton(),
             const SizedBox(height: 16),
             TextFormField(
               controller: _kilosRojoController,
@@ -267,7 +267,7 @@ class _RegistroFormState extends State<RegistroForm>
   Widget _buildSecoForm() {
     return Form(
       key: _formKeySeco,
-      child: Padding(
+      child: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -297,7 +297,7 @@ class _RegistroFormState extends State<RegistroForm>
               },
             ),
             const SizedBox(height: 16),
-            _buildFincaField(),
+            _buildFincaFieldSecoWithButton(),
             const SizedBox(height: 16),
             TextFormField(
               controller: _kilosSecoController,
@@ -368,21 +368,17 @@ class _RegistroFormState extends State<RegistroForm>
         _fincaRojoController.text.isEmpty ? null : _fincaRojoController.text;
     return DropdownButtonFormField<String>(
       value: selectedRojo,
-      decoration: InputDecoration(
+      decoration: const InputDecoration(
         labelText: 'Finca',
-        border: const OutlineInputBorder(),
-        prefixIcon: const Icon(Icons.home),
-        suffixIcon: IconButton(
-          icon: const Icon(Icons.add),
-          onPressed: () => _showAddFincaDialog(isRojo: true),
-        ),
+        border: OutlineInputBorder(),
+        prefixIcon: Icon(Icons.home),
       ),
       isExpanded: true,
       hint: const Text('Seleccionar o agregar finca'),
       items: _fincasList.map((finca) {
         return DropdownMenuItem<String>(
           value: finca,
-          child: Text(finca),
+          child: Text(finca.toUpperCase()),
         );
       }).toList(),
       onChanged: (value) {
@@ -399,26 +395,36 @@ class _RegistroFormState extends State<RegistroForm>
     );
   }
 
+  Widget _buildFincaFieldRojoWithButton() {
+    return Row(
+      children: [
+        Expanded(child: _buildFincaFieldRojo()),
+        const SizedBox(width: 8),
+        IconButton(
+          icon: const Icon(Icons.add_circle, color: Colors.green),
+          onPressed: () => _showAddFincaDialog(isRojo: true),
+          tooltip: 'Agregar nueva finca',
+        ),
+      ],
+    );
+  }
+
   Widget _buildFincaField() {
     final selectedSeco =
         _fincaSecoController.text.isEmpty ? null : _fincaSecoController.text;
     return DropdownButtonFormField<String>(
       value: selectedSeco,
-      decoration: InputDecoration(
+      decoration: const InputDecoration(
         labelText: 'Finca',
-        border: const OutlineInputBorder(),
-        prefixIcon: const Icon(Icons.home),
-        suffixIcon: IconButton(
-          icon: const Icon(Icons.add),
-          onPressed: () => _showAddFincaDialog(),
-        ),
+        border: OutlineInputBorder(),
+        prefixIcon: Icon(Icons.home),
       ),
       isExpanded: true,
       hint: const Text('Seleccionar o agregar finca'),
       items: _fincasList.map((finca) {
         return DropdownMenuItem<String>(
           value: finca,
-          child: Text(finca),
+          child: Text(finca.toUpperCase()),
         );
       }).toList(),
       onChanged: (value) {
@@ -435,6 +441,20 @@ class _RegistroFormState extends State<RegistroForm>
     );
   }
 
+  Widget _buildFincaFieldSecoWithButton() {
+    return Row(
+      children: [
+        Expanded(child: _buildFincaField()),
+        const SizedBox(width: 8),
+        IconButton(
+          icon: const Icon(Icons.add_circle, color: Colors.green),
+          onPressed: () => _showAddFincaDialog(),
+          tooltip: 'Agregar nueva finca',
+        ),
+      ],
+    );
+  }
+
   void _showAddFincaDialog({bool isRojo = false}) {
     final controller = TextEditingController();
     showDialog(
@@ -446,9 +466,10 @@ class _RegistroFormState extends State<RegistroForm>
           decoration: const InputDecoration(
             labelText: 'Nombre de la finca',
             border: OutlineInputBorder(),
+            hintText: 'Escriba en mayúsculas',
           ),
           autofocus: true,
-          textCapitalization: TextCapitalization.words,
+          textCapitalization: TextCapitalization.characters,
         ),
         actions: [
           TextButton(
@@ -458,13 +479,14 @@ class _RegistroFormState extends State<RegistroForm>
           ElevatedButton(
             onPressed: () {
               if (controller.text.trim().isNotEmpty) {
-                PreferencesService.instance.addFinca(controller.text.trim());
+                final nuevaFinca = controller.text.trim().toUpperCase();
+                PreferencesService.instance.addFinca(nuevaFinca);
                 setState(() {
                   _fincasList = PreferencesService.instance.getFincas();
                   if (isRojo) {
-                    _fincaRojoController.text = controller.text.trim();
+                    _fincaRojoController.text = nuevaFinca;
                   } else {
-                    _fincaSecoController.text = controller.text.trim();
+                    _fincaSecoController.text = nuevaFinca;
                   }
                 });
                 Navigator.pop(context);
