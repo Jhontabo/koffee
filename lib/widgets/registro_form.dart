@@ -221,44 +221,7 @@ class _RegistroFormState extends State<RegistroForm>
               },
             ),
             const SizedBox(height: 16),
-            Autocomplete<String>(
-              optionsBuilder: (TextEditingValue textEditingValue) {
-                if (textEditingValue.text.isEmpty) {
-                  return _fincasList;
-                }
-                return _fincasList.where((finca) => finca
-                    .toLowerCase()
-                    .contains(textEditingValue.text.toLowerCase()));
-              },
-              onSelected: (String selection) {
-                _fincaRojoController.text = selection;
-              },
-              fieldViewBuilder: (context, controller, focusNode, onSubmitted) {
-                _fincaRojoController.text = controller.text;
-                return TextFormField(
-                  controller: controller,
-                  focusNode: focusNode,
-                  decoration: InputDecoration(
-                    labelText: 'Finca',
-                    border: const OutlineInputBorder(),
-                    prefixIcon: const Icon(Icons.home),
-                    suffixIcon: IconButton(
-                      icon: const Icon(Icons.add),
-                      onPressed: () => _showAddFincaDialog(isRojo: true),
-                    ),
-                  ),
-                  validator: (value) {
-                    if (value == null || value.trim().isEmpty) {
-                      return 'Ingrese el nombre de la finca';
-                    }
-                    return null;
-                  },
-                  onChanged: (value) {
-                    _fincaRojoController.text = value;
-                  },
-                );
-              },
-            ),
+            _buildFincaFieldRojo(),
             const SizedBox(height: 16),
             TextFormField(
               controller: _kilosRojoController,
@@ -400,42 +363,74 @@ class _RegistroFormState extends State<RegistroForm>
     );
   }
 
-  Widget _buildFincaField() {
-    return Autocomplete<String>(
-      optionsBuilder: (TextEditingValue textEditingValue) {
-        if (textEditingValue.text.isEmpty) {
-          return _fincasList;
-        }
-        return _fincasList.where((finca) =>
-            finca.toLowerCase().contains(textEditingValue.text.toLowerCase()));
-      },
-      onSelected: (String selection) {
-        _fincaSecoController.text = selection;
-      },
-      fieldViewBuilder: (context, controller, focusNode, onSubmitted) {
-        _fincaSecoController.text = controller.text;
-        return TextFormField(
-          controller: controller,
-          focusNode: focusNode,
-          decoration: InputDecoration(
-            labelText: 'Finca',
-            border: const OutlineInputBorder(),
-            prefixIcon: const Icon(Icons.home),
-            suffixIcon: IconButton(
-              icon: const Icon(Icons.add),
-              onPressed: () => _showAddFincaDialog(),
-            ),
-          ),
-          validator: (value) {
-            if (value == null || value.trim().isEmpty) {
-              return 'Ingrese el nombre de la finca';
-            }
-            return null;
-          },
-          onChanged: (value) {
-            _fincaSecoController.text = value;
-          },
+  Widget _buildFincaFieldRojo() {
+    final selectedRojo =
+        _fincaRojoController.text.isEmpty ? null : _fincaRojoController.text;
+    return DropdownButtonFormField<String>(
+      value: selectedRojo,
+      decoration: InputDecoration(
+        labelText: 'Finca',
+        border: const OutlineInputBorder(),
+        prefixIcon: const Icon(Icons.home),
+        suffixIcon: IconButton(
+          icon: const Icon(Icons.add),
+          onPressed: () => _showAddFincaDialog(isRojo: true),
+        ),
+      ),
+      isExpanded: true,
+      hint: const Text('Seleccionar o agregar finca'),
+      items: _fincasList.map((finca) {
+        return DropdownMenuItem<String>(
+          value: finca,
+          child: Text(finca),
         );
+      }).toList(),
+      onChanged: (value) {
+        if (value != null) {
+          _fincaRojoController.text = value;
+        }
+      },
+      validator: (value) {
+        if (value == null || value.trim().isEmpty) {
+          return 'Seleccione una finca';
+        }
+        return null;
+      },
+    );
+  }
+
+  Widget _buildFincaField() {
+    final selectedSeco =
+        _fincaSecoController.text.isEmpty ? null : _fincaSecoController.text;
+    return DropdownButtonFormField<String>(
+      value: selectedSeco,
+      decoration: InputDecoration(
+        labelText: 'Finca',
+        border: const OutlineInputBorder(),
+        prefixIcon: const Icon(Icons.home),
+        suffixIcon: IconButton(
+          icon: const Icon(Icons.add),
+          onPressed: () => _showAddFincaDialog(),
+        ),
+      ),
+      isExpanded: true,
+      hint: const Text('Seleccionar o agregar finca'),
+      items: _fincasList.map((finca) {
+        return DropdownMenuItem<String>(
+          value: finca,
+          child: Text(finca),
+        );
+      }).toList(),
+      onChanged: (value) {
+        if (value != null) {
+          _fincaSecoController.text = value;
+        }
+      },
+      validator: (value) {
+        if (value == null || value.trim().isEmpty) {
+          return 'Seleccione una finca';
+        }
+        return null;
       },
     );
   }
