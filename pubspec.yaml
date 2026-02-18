@@ -18,11 +18,19 @@ dependencies:
   provider: ^6.1.1
   fl_chart: ^0.66.0
   intl: ^0.18.1
+  shared_preferences: ^2.2.2
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^3.0.0
+  flutter_launcher_icons: ^0.13.1
+
+flutter_launcher_icons:
+  android: true
+  ios: false
+  image_path: "assets/icon/coffee_icon.png"
+  remove_alpha_ios: true
 
 flutter:
   uses-material-design: true

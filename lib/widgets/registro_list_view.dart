@@ -47,8 +47,7 @@ class _RegistroCard extends StatelessWidget {
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: ListTile(
         leading: CircleAvatar(
-          backgroundColor:
-              registro.isSynced ? Colors.green : Colors.orange,
+          backgroundColor: registro.isSynced ? Colors.green : Colors.orange,
           child: Icon(
             registro.isSynced ? Icons.cloud_done : Icons.cloud_off,
             color: Colors.white,
@@ -62,8 +61,16 @@ class _RegistroCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text('Fecha: ${dateFormat.format(registro.fecha)}'),
-            Text('Kilos: ${registro.kilosSeco.toStringAsFixed(2)}'),
-            Text('Valor: ${currencyFormat.format(registro.valorUnitario)}'),
+            if (registro.kilosRojo > 0)
+              Text(
+                'Rojo: ${registro.kilosRojo.toStringAsFixed(2)} kg',
+                style: const TextStyle(color: Colors.red),
+              ),
+            if (registro.kilosSeco > 0)
+              Text('Seco: ${registro.kilosSeco.toStringAsFixed(2)} kg'),
+            if (registro.valorUnitario > 0)
+              Text(
+                  'Valor: ${currencyFormat.format(registro.valorUnitario)}/kg'),
             Text(
               'Total: ${currencyFormat.format(registro.total)}',
               style: const TextStyle(fontWeight: FontWeight.bold),

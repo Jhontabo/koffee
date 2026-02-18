@@ -45,7 +45,7 @@ class KilosBarChart extends StatelessWidget {
           child: Column(
             children: [
               const Text(
-                'Kilos Secos por Finca',
+                'Kilos por Finca',
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,

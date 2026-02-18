@@ -31,6 +31,7 @@ class DatabaseHelper {
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         fecha TEXT NOT NULL,
         finca TEXT NOT NULL,
+        kilosRojo REAL NOT NULL DEFAULT 0,
         kilosSeco REAL NOT NULL,
         valorUnitario REAL NOT NULL,
         total REAL NOT NULL,
@@ -95,7 +96,7 @@ class DatabaseHelper {
   Future<Map<String, double>> getKilosByFinca() async {
     final db = await database;
     final result = await db.rawQuery(
-      'SELECT finca, SUM(kilosSeco) as totalKilos FROM registros GROUP BY finca',
+      'SELECT finca, SUM(kilosSeco + kilosRojo) as totalKilos FROM registros GROUP BY finca',
     );
     final Map<String, double> kilosMap = {};
     for (final row in result) {

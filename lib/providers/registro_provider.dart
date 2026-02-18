@@ -81,11 +81,12 @@ class RegistroProvider extends ChangeNotifier {
   }
 
   void _updateKilosByFinca(RegistroFinca registro) {
+    final totalKilos = registro.kilosSeco + registro.kilosRojo;
     if (_kilosByFinca.containsKey(registro.finca)) {
       _kilosByFinca[registro.finca] =
-          _kilosByFinca[registro.finca]! + registro.kilosSeco;
+          _kilosByFinca[registro.finca]! + totalKilos;
     } else {
-      _kilosByFinca[registro.finca] = registro.kilosSeco;
+      _kilosByFinca[registro.finca] = totalKilos;
     }
   }
 

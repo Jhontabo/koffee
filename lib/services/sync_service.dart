@@ -1,14 +1,12 @@
 import 'dart:async';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../models/registro_finca.dart';
 import 'database_helper.dart';
 
 class SyncService {
   static final SyncService instance = SyncService._init();
   final Connectivity _connectivity = Connectivity();
   StreamSubscription<ConnectivityResult>? _connectivitySubscription;
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final CollectionReference _registrosCollection =
       FirebaseFirestore.instance.collection('registros');
 
