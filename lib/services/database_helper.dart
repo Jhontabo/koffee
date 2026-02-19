@@ -37,6 +37,7 @@ class DatabaseHelper {
     await db.execute('''
       CREATE TABLE registros (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
+        userId TEXT NOT NULL,
         fecha TEXT NOT NULL,
         finca TEXT NOT NULL,
         kilosRojo REAL NOT NULL DEFAULT 0,
@@ -45,6 +46,14 @@ class DatabaseHelper {
         total REAL NOT NULL,
         isSynced INTEGER NOT NULL DEFAULT 0,
         firebaseId TEXT
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE fincas (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        userId TEXT NOT NULL,
+        nombre TEXT NOT NULL
       )
     ''');
   }
@@ -56,9 +65,14 @@ class DatabaseHelper {
     return await db.insert('registros', map);
   }
 
-  Future<List<RegistroFinca>> getAllRegistros() async {
+  Future<List<RegistroFinca>> getAllRegistros(String userId) async {
     final db = await database;
-    final result = await db.query('registros', orderBy: 'fecha DESC');
+    final result = await db.query(
+      'registros',
+      where: 'userId = ?',
+      whereArgs: [userId],
+      orderBy: 'fecha DESC',
+    );
     return result.map((map) => RegistroFinca.fromMap(map)).toList();
   }
 
@@ -101,10 +115,11 @@ class DatabaseHelper {
     );
   }
 
-  Future<Map<String, double>> getKilosByFinca() async {
+  Future<Map<String, double>> getKilosByFinca(String userId) async {
     final db = await database;
     final result = await db.rawQuery(
-      'SELECT finca, SUM(kilosSeco + kilosRojo) as totalKilos FROM registros GROUP BY finca',
+      'SELECT finca, SUM(kilosSeco + kilosRojo) as totalKilos FROM registros WHERE userId = ? GROUP BY finca',
+      [userId],
     );
     final Map<String, double> kilosMap = {};
     for (final row in result) {
@@ -115,7 +130,7 @@ class DatabaseHelper {
 
   Future<void> upsertRegistro(RegistroFinca registro) async {
     final db = await database;
-    
+
     // Check if exists by firebaseId
     if (registro.firebaseId != null) {
       final existing = await db.query(
@@ -130,7 +145,7 @@ class DatabaseHelper {
         final map = registro.toMap();
         map.remove('id'); // Don't change local ID
         map['isSynced'] = 1; // Mark as synced since it comes from cloud
-        
+
         await db.update(
           'registros',
           map,
@@ -146,6 +161,30 @@ class DatabaseHelper {
     map.remove('id'); // Let autoincrement work
     map['isSynced'] = 1;
     await db.insert('registros', map);
+  }
+
+  Future<int> insertFinca(String userId, String nombre) async {
+    final db = await database;
+    return await db.insert('fincas', {'userId': userId, 'nombre': nombre});
+  }
+
+  Future<List<String>> getFincas(String userId) async {
+    final db = await database;
+    final result = await db.query(
+      'fincas',
+      where: 'userId = ?',
+      whereArgs: [userId],
+    );
+    return result.map((map) => map['nombre'] as String).toList();
+  }
+
+  Future<int> deleteFinca(String userId, String nombre) async {
+    final db = await database;
+    return await db.delete(
+      'fincas',
+      where: 'userId = ? AND nombre = ?',
+      whereArgs: [userId, nombre],
+    );
   }
 
   Future<void> close() async {
