@@ -26,11 +26,27 @@ class MyApp extends StatelessWidget {
         title: 'Koffee',
         debugShowCheckedModeBanner: false,
         theme: ThemeData(
-          colorScheme: ColorScheme.fromSeed(
-            seedColor: Colors.green,
-            brightness: Brightness.light,
-          ),
           useMaterial3: true,
+          colorScheme: ColorScheme.fromSeed(
+            seedColor: Colors.brown,
+            brightness: Brightness.light,
+            primary: Colors.brown[900], // Darker for better contrast in sun
+            secondary: Colors.amber[900], // High visibility accent
+            tertiary: Colors.green[800], // For agricultural context
+            surface: Colors.grey[50], // Very light background to reduce glare
+            onSurface: Colors.black87, // High contrast text
+          ),
+          appBarTheme: AppBarTheme(
+            backgroundColor: Colors.brown[900],
+            foregroundColor: Colors.white,
+            elevation: 2,
+          ),
+          bottomNavigationBarTheme: BottomNavigationBarThemeData(
+            backgroundColor: Colors.white,
+            selectedItemColor: Colors.brown[900],
+            unselectedItemColor: Colors.grey[600],
+            selectedLabelStyle: const TextStyle(fontWeight: FontWeight.bold),
+          ),
         ),
         home: const HomeScreen(),
       ),

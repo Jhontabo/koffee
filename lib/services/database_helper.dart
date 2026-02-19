@@ -20,9 +20,17 @@ class DatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 1,
+      version: 2,
       onCreate: _createDB,
+      onUpgrade: _upgradeDB,
     );
+  }
+
+  Future<void> _upgradeDB(Database db, int oldVersion, int newVersion) async {
+    if (oldVersion < 2) {
+      await db.execute(
+          'ALTER TABLE registros ADD COLUMN kilosRojo REAL NOT NULL DEFAULT 0');
+    }
   }
 
   Future<void> _createDB(Database db, int version) async {
@@ -103,6 +111,41 @@ class DatabaseHelper {
       kilosMap[row['finca'] as String] = (row['totalKilos'] as num).toDouble();
     }
     return kilosMap;
+  }
+
+  Future<void> upsertRegistro(RegistroFinca registro) async {
+    final db = await database;
+    
+    // Check if exists by firebaseId
+    if (registro.firebaseId != null) {
+      final existing = await db.query(
+        'registros',
+        where: 'firebaseId = ?',
+        whereArgs: [registro.firebaseId],
+      );
+
+      if (existing.isNotEmpty) {
+        // Update
+        final id = existing.first['id'] as int;
+        final map = registro.toMap();
+        map.remove('id'); // Don't change local ID
+        map['isSynced'] = 1; // Mark as synced since it comes from cloud
+        
+        await db.update(
+          'registros',
+          map,
+          where: 'id = ?',
+          whereArgs: [id],
+        );
+        return;
+      }
+    }
+
+    // Insert new
+    final map = registro.toMap();
+    map.remove('id'); // Let autoincrement work
+    map['isSynced'] = 1;
+    await db.insert('registros', map);
   }
 
   Future<void> close() async {

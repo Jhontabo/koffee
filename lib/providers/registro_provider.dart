@@ -19,7 +19,10 @@ class RegistroProvider extends ChangeNotifier {
   }
 
   Future<void> _init() async {
+    // Primero cargamos lo local para mostrar algo rápido
     await loadRegistros();
+    // Luego intentamos sincronizar con la nube
+    syncRecords(); 
     SyncService.instance.startListening(_onConnectivityChanged);
   }
 
@@ -72,7 +75,7 @@ class RegistroProvider extends ChangeNotifier {
 
   Future<void> syncRecords() async {
     try {
-      await SyncService.instance.syncUnsyncedRecords();
+      await SyncService.instance.syncAllRecords();
       await loadRegistros();
     } catch (e) {
       _error = e.toString();

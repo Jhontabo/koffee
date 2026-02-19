@@ -28,12 +28,9 @@ class KilosBarChart extends StatelessWidget {
               barRods: [
                 BarChartRodData(
                   toY: kilosData[farmNames[i]]!,
-                  color: Colors.green.shade700,
+                  color: Theme.of(context).colorScheme.primary,
                   width: 20,
-                  borderRadius: const BorderRadius.only(
-                    topLeft: Radius.circular(4),
-                    topRight: Radius.circular(4),
-                  ),
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(4)),
                 ),
               ],
             ),
