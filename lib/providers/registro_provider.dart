@@ -7,6 +7,7 @@ import '../services/auth_service.dart';
 class RegistroProvider extends ChangeNotifier {
   List<RegistroFinca> _registros = [];
   Map<String, double> _kilosByFinca = {};
+  List<String> _fincas = [];
   bool _isLoading = false;
   String? _error;
   String? _userId;
@@ -14,9 +15,12 @@ class RegistroProvider extends ChangeNotifier {
 
   final CollectionReference _registrosCollection = FirebaseFirestore.instance
       .collection('registros');
+  final CollectionReference _fincasCollection = FirebaseFirestore.instance
+      .collection('fincas');
 
   List<RegistroFinca> get registros => _registros;
   Map<String, double> get kilosByFinca => _kilosByFinca;
+  List<String> get fincas => _fincas;
   bool get isLoading => _isLoading;
   String? get error => _error;
   String? get userId => _userId;
@@ -30,9 +34,11 @@ class RegistroProvider extends ChangeNotifier {
       if (user != null) {
         _userId = user.uid;
         loadRegistros();
+        loadFincas();
       } else {
         _userId = null;
         _registros = [];
+        _fincas = [];
         _kilosByFinca = {};
         notifyListeners();
       }
@@ -43,6 +49,75 @@ class RegistroProvider extends ChangeNotifier {
   void dispose() {
     _authSubscription?.cancel();
     super.dispose();
+  }
+
+  Future<void> loadFincas() async {
+    if (_userId == null) return;
+
+    try {
+      final snapshot = await _fincasCollection
+          .where('userId', isEqualTo: _userId)
+          .get();
+
+      _fincas = snapshot.docs
+          .map((doc) {
+            final data = doc.data() as Map<String, dynamic>?;
+            if (data == null) return null;
+            return data['nombre'] as String?;
+          })
+          .whereType<String>()
+          .toList();
+
+      final fincasFromRegistros = _registros
+          .map((r) => r.finca)
+          .where((f) => !_fincas.contains(f))
+          .toList();
+
+      for (final nombre in fincasFromRegistros) {
+        await _fincasCollection.add({'userId': _userId, 'nombre': nombre});
+      }
+
+      _fincas = {..._fincas, ...fincasFromRegistros}.toList();
+      notifyListeners();
+    } catch (e) {
+      print('Error cargando fincas: $e');
+    }
+  }
+
+  Future<void> addFinca(String nombre) async {
+    if (_userId == null || nombre.trim().isEmpty) return;
+
+    try {
+      final trimmed = nombre.trim();
+      if (_fincas.contains(trimmed)) return;
+
+      await _fincasCollection.add({'userId': _userId, 'nombre': trimmed});
+
+      _fincas.add(trimmed);
+      notifyListeners();
+    } catch (e) {
+      print('Error guardando finca: $e');
+    }
+  }
+
+  Future<void> removeFinca(String nombre) async {
+    if (_userId == null) return;
+
+    try {
+      final snapshot = await _fincasCollection
+          .where('userId', isEqualTo: _userId)
+          .where('nombre', isEqualTo: nombre)
+          .get();
+
+      for (final doc in snapshot.docs) {
+        await doc.reference.delete();
+      }
+
+      _fincas.remove(nombre);
+      notifyListeners();
+    } catch (e) {
+      print('Error eliminando finca: $e');
+    }
   }
 
   Future<void> loadRegistros() async {

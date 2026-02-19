@@ -4,7 +4,6 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../models/registro_finca.dart';
 import '../providers/registro_provider.dart';
-import '../services/preferences_service.dart';
 
 class RegistroForm extends StatefulWidget {
   const RegistroForm({super.key});
@@ -43,13 +42,13 @@ class _RegistroFormState extends State<RegistroForm>
   }
 
   void _loadPreferences() {
-    final userId = context.read<RegistroProvider>().userId ?? '';
+    final provider = context.read<RegistroProvider>();
+    final userId = provider.userId ?? '';
 
     if (_lastUserId != userId) {
       _lastUserId = userId;
-      final fincas = PreferencesService.instance.getFincas(userId);
       setState(() {
-        _fincasList = fincas;
+        _fincasList = provider.fincas;
         _fechaRojoController.text = DateFormat(
           'yyyy-MM-dd',
         ).format(_selectedDateRojo);
@@ -57,6 +56,13 @@ class _RegistroFormState extends State<RegistroForm>
           'yyyy-MM-dd',
         ).format(_selectedDateSeco);
       });
+    } else {
+      final fincas = provider.fincas;
+      if (_fincasList.length != fincas.length) {
+        setState(() {
+          _fincasList = fincas;
+        });
+      }
     }
   }
 
@@ -123,11 +129,6 @@ class _RegistroFormState extends State<RegistroForm>
         total: 0,
       );
 
-      PreferencesService.instance.addFinca(
-        userId,
-        _fincaRojoController.text.trim(),
-      );
-
       context.read<RegistroProvider>().addRegistro(registro);
       _clearFormRojo();
       ScaffoldMessenger.of(
@@ -150,11 +151,6 @@ class _RegistroFormState extends State<RegistroForm>
         kilosSeco: kilosSeco,
         valorUnitario: valorUnitario,
         total: total,
-      );
-
-      PreferencesService.instance.addFinca(
-        userId,
-        _fincaSecoController.text.trim(),
       );
 
       context.read<RegistroProvider>().addRegistro(registro);
@@ -506,9 +502,9 @@ class _RegistroFormState extends State<RegistroForm>
             onPressed: () {
               if (controller.text.trim().isNotEmpty) {
                 final nuevaFinca = controller.text.trim().toUpperCase();
-                PreferencesService.instance.addFinca(userId, nuevaFinca);
+                context.read<RegistroProvider>().addFinca(nuevaFinca);
                 setState(() {
-                  _fincasList = PreferencesService.instance.getFincas(userId);
+                  _fincasList = context.read<RegistroProvider>().fincas;
                   if (isRojo) {
                     _fincaRojoController.text = nuevaFinca;
                   } else {
