@@ -19,11 +19,7 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   int _selectedIndex = 0;
 
-  final List<String> _titles = const [
-    'Inicio',
-    'Registros',
-    'Gráfica',
-  ];
+  final List<String> _titles = const ['Inicio', 'Registros', 'Gráfica'];
 
   void _onItemTapped(int index) {
     if (index != _selectedIndex) {
@@ -85,11 +81,7 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
       body: IndexedStack(
         index: _selectedIndex,
-        children: const [
-          RegistroForm(),
-          RegistroListView(),
-          KilosBarChart(),
-        ],
+        children: const [RegistroForm(), RegistroListView(), KilosBarChart()],
       ),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
@@ -136,14 +128,19 @@ class _HomeScreenState extends State<HomeScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             ListTile(
-              leading:
-                  const Icon(Icons.calendar_view_week, color: Colors.brown),
+              leading: const Icon(
+                Icons.calendar_view_week,
+                color: Colors.brown,
+              ),
               title: const Text('Esta Semana'),
               onTap: () {
                 Navigator.pop(ctx);
                 final now = DateTime.now();
-                _generateReport(now.subtract(const Duration(days: 7)), now,
-                    'Reporte Semanal');
+                _generateReport(
+                  now.subtract(const Duration(days: 7)),
+                  now,
+                  'Reporte Semanal',
+                );
               },
             ),
             ListTile(
@@ -153,8 +150,11 @@ class _HomeScreenState extends State<HomeScreen> {
                 Navigator.pop(ctx);
                 final now = DateTime.now();
                 final startOfMonth = DateTime(now.year, now.month, 1);
-                _generateReport(startOfMonth, now,
-                    'Reporte Mensual (${DateFormat('MMMM', 'es').format(now)})');
+                _generateReport(
+                  startOfMonth,
+                  now,
+                  'Reporte Mensual (${DateFormat('MMMM', 'es').format(now)})',
+                );
               },
             ),
             ListTile(
@@ -162,8 +162,11 @@ class _HomeScreenState extends State<HomeScreen> {
               title: const Text('Todo el Historial'),
               onTap: () {
                 Navigator.pop(ctx);
-                _generateReport(DateTime(2020), DateTime.now(),
-                    'Reporte Histórico Completo');
+                _generateReport(
+                  DateTime(2020),
+                  DateTime.now(),
+                  'Reporte Histórico Completo',
+                );
               },
             ),
           ],
@@ -179,7 +182,10 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _generateReport(
-      DateTime start, DateTime end, String title) async {
+    DateTime start,
+    DateTime end,
+    String title,
+  ) async {
     final provider = context.read<RegistroProvider>();
     // Filter records locally
     final allRecords = provider.registros;
@@ -207,9 +213,9 @@ class _HomeScreenState extends State<HomeScreen> {
       );
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error generando PDF: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error generando PDF: $e')));
       }
     }
   }
@@ -229,6 +235,10 @@ class _HomeScreenState extends State<HomeScreen> {
             onPressed: () async {
               Navigator.pop(ctx);
               await AuthService.instance.signOut();
+              if (mounted) {
+                // Force rebuild by setting state
+                setState(() {});
+              }
             },
             style: TextButton.styleFrom(foregroundColor: Colors.red),
             child: const Text('Cerrar Sesión'),
