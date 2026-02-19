@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/registro_finca.dart';
@@ -9,9 +10,10 @@ class RegistroProvider extends ChangeNotifier {
   bool _isLoading = false;
   String? _error;
   String? _userId;
+  StreamSubscription? _authSubscription;
 
-  final CollectionReference _registrosCollection =
-      FirebaseFirestore.instance.collection('registros');
+  final CollectionReference _registrosCollection = FirebaseFirestore.instance
+      .collection('registros');
 
   List<RegistroFinca> get registros => _registros;
   Map<String, double> get kilosByFinca => _kilosByFinca;
@@ -23,17 +25,24 @@ class RegistroProvider extends ChangeNotifier {
     _init();
   }
 
-  void setUserId(String? userId) {
-    _userId = userId;
-    loadRegistros();
+  void _init() {
+    _authSubscription = AuthService.instance.authStateChanges.listen((user) {
+      if (user != null) {
+        _userId = user.uid;
+        loadRegistros();
+      } else {
+        _userId = null;
+        _registros = [];
+        _kilosByFinca = {};
+        notifyListeners();
+      }
+    });
   }
 
-  Future<void> _init() async {
-    final user = AuthService.instance.currentUser;
-    if (user != null) {
-      _userId = user.uid;
-      await loadRegistros();
-    }
+  @override
+  void dispose() {
+    _authSubscription?.cancel();
+    super.dispose();
   }
 
   Future<void> loadRegistros() async {
