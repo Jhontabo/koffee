@@ -404,9 +404,11 @@ class _RegistroFormState extends State<RegistroForm>
   }
 
   Widget _buildFincaFieldRojo() {
-    final selectedRojo = _fincaRojoController.text.isEmpty
+    final controllerValue = _fincaRojoController.text;
+    final selectedRojo =
+        controllerValue.isEmpty || !_fincasList.contains(controllerValue)
         ? null
-        : _fincaRojoController.text;
+        : controllerValue;
     return DropdownButtonFormField<String>(
       value: selectedRojo,
       decoration: const InputDecoration(
@@ -424,6 +426,12 @@ class _RegistroFormState extends State<RegistroForm>
       }).toList(),
       onChanged: (value) {
         if (value != null) {
+          if (!_fincasList.contains(value)) {
+            setState(() {
+              _fincasList.add(value);
+              _fincasList.sort();
+            });
+          }
           _fincaRojoController.text = value;
         }
       },
@@ -451,9 +459,11 @@ class _RegistroFormState extends State<RegistroForm>
   }
 
   Widget _buildFincaField() {
-    final selectedSeco = _fincaSecoController.text.isEmpty
+    final controllerValue = _fincaSecoController.text;
+    final selectedSeco =
+        controllerValue.isEmpty || !_fincasList.contains(controllerValue)
         ? null
-        : _fincaSecoController.text;
+        : controllerValue;
     return DropdownButtonFormField<String>(
       value: selectedSeco,
       decoration: const InputDecoration(
@@ -471,6 +481,12 @@ class _RegistroFormState extends State<RegistroForm>
       }).toList(),
       onChanged: (value) {
         if (value != null) {
+          if (!_fincasList.contains(value)) {
+            setState(() {
+              _fincasList.add(value);
+              _fincasList.sort();
+            });
+          }
           _fincaSecoController.text = value;
         }
       },
