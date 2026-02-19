@@ -191,24 +191,39 @@ class _RegistroFormState extends State<RegistroForm>
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        TabBar(
-          controller: _tabController,
-          labelColor: Colors.red,
-          unselectedLabelColor: Colors.grey,
-          tabs: const [
-            Tab(text: 'ROJO'),
-            Tab(text: 'SECO'),
+    return Consumer<RegistroProvider>(
+      builder: (context, provider, child) {
+        final uniqueFincas = provider.fincas.toSet().toList()..sort();
+        if (_fincasList.toSet().difference(uniqueFincas.toSet()).isNotEmpty ||
+            uniqueFincas.toSet().difference(_fincasList.toSet()).isNotEmpty) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) {
+              setState(() {
+                _fincasList = uniqueFincas;
+              });
+            }
+          });
+        }
+        return Column(
+          children: [
+            TabBar(
+              controller: _tabController,
+              labelColor: Colors.red,
+              unselectedLabelColor: Colors.grey,
+              tabs: const [
+                Tab(text: 'ROJO'),
+                Tab(text: 'SECO'),
+              ],
+            ),
+            Expanded(
+              child: TabBarView(
+                controller: _tabController,
+                children: [_buildRojoForm(), _buildSecoForm()],
+              ),
+            ),
           ],
-        ),
-        Expanded(
-          child: TabBarView(
-            controller: _tabController,
-            children: [_buildRojoForm(), _buildSecoForm()],
-          ),
-        ),
-      ],
+        );
+      },
     );
   }
 

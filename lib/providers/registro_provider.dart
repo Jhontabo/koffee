@@ -39,8 +39,8 @@ class RegistroProvider extends ChangeNotifier {
       if (user != null) {
         _userId = user.uid;
         await _cargarUsuario();
-        loadRegistros();
-        loadFincas();
+        await loadRegistros();
+        await loadFincas();
       } else {
         _userId = null;
         _rol = 'usuario';
