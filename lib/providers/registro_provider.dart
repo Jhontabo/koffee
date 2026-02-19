@@ -173,7 +173,6 @@ class RegistroProvider extends ChangeNotifier {
     try {
       final snapshot = await _registrosCollection
           .where('userId', isEqualTo: _userId)
-          .orderBy('fecha', descending: true)
           .get();
 
       _registros = snapshot.docs.map((doc) {
@@ -192,6 +191,7 @@ class RegistroProvider extends ChangeNotifier {
         );
       }).toList();
 
+      _registros.sort((a, b) => b.fecha.compareTo(a.fecha));
       _calculateKilosByFinca();
     } catch (e) {
       _error = e.toString();
