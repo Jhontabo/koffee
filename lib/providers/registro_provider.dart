@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/registro_finca.dart';
 import '../services/auth_service.dart';
+import '../services/usuario_service.dart';
 
 class RegistroProvider extends ChangeNotifier {
   List<RegistroFinca> _registros = [];
@@ -11,6 +12,7 @@ class RegistroProvider extends ChangeNotifier {
   bool _isLoading = false;
   String? _error;
   String? _userId;
+  String _rol = 'usuario';
   StreamSubscription? _authSubscription;
 
   final CollectionReference _registrosCollection = FirebaseFirestore.instance
@@ -24,25 +26,39 @@ class RegistroProvider extends ChangeNotifier {
   bool get isLoading => _isLoading;
   String? get error => _error;
   String? get userId => _userId;
+  String get rol => _rol;
 
   RegistroProvider() {
     _init();
   }
 
   void _init() {
-    _authSubscription = AuthService.instance.authStateChanges.listen((user) {
+    _authSubscription = AuthService.instance.authStateChanges.listen((
+      user,
+    ) async {
       if (user != null) {
         _userId = user.uid;
+        await _cargarUsuario();
         loadRegistros();
         loadFincas();
       } else {
         _userId = null;
+        _rol = 'usuario';
         _registros = [];
         _fincas = [];
         _kilosByFinca = {};
         notifyListeners();
       }
     });
+  }
+
+  Future<void> _cargarUsuario() async {
+    if (_userId == null) return;
+    final usuario = await UsuarioService.instance.getUsuario(_userId!);
+    if (usuario != null) {
+      _rol = usuario.rol;
+      notifyListeners();
+    }
   }
 
   @override

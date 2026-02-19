@@ -1,5 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
+import 'usuario_service.dart';
 
 class AuthService {
   static final AuthService instance = AuthService._();
@@ -20,6 +21,12 @@ class AuthService {
         email: email,
         password: password,
       );
+      if (credential.user != null) {
+        await UsuarioService.instance.crearUsuario(
+          userId: credential.user!.uid,
+          email: email,
+        );
+      }
       return credential.user;
     } on FirebaseAuthException catch (e) {
       debugPrint('Error signing in: ${e.code}');
@@ -36,6 +43,12 @@ class AuthService {
         email: email,
         password: password,
       );
+      if (credential.user != null) {
+        await UsuarioService.instance.crearUsuario(
+          userId: credential.user!.uid,
+          email: email,
+        );
+      }
       return credential.user;
     } on FirebaseAuthException catch (e) {
       debugPrint('Error creating user: ${e.code}');
