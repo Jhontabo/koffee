@@ -31,23 +31,39 @@ class _RegistroFormState extends State<RegistroForm>
   DateTime _selectedDateRojo = DateTime.now();
   DateTime _selectedDateSeco = DateTime.now();
   List<String> _fincasList = [];
+  String? _lastUserId;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
-    _loadPreferences();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadPreferences();
+    });
   }
 
-  Future<void> _loadPreferences() async {
-    final fincas = PreferencesService.instance.getFincas();
-    setState(() {
-      _fincasList = fincas;
-      _fechaRojoController.text =
-          DateFormat('yyyy-MM-dd').format(_selectedDateRojo);
-      _fechaSecoController.text =
-          DateFormat('yyyy-MM-dd').format(_selectedDateSeco);
-    });
+  void _loadPreferences() {
+    final userId = context.read<RegistroProvider>().userId ?? '';
+
+    if (_lastUserId != userId) {
+      _lastUserId = userId;
+      final fincas = PreferencesService.instance.getFincas(userId);
+      setState(() {
+        _fincasList = fincas;
+        _fechaRojoController.text = DateFormat(
+          'yyyy-MM-dd',
+        ).format(_selectedDateRojo);
+        _fechaSecoController.text = DateFormat(
+          'yyyy-MM-dd',
+        ).format(_selectedDateSeco);
+      });
+    }
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _loadPreferences();
   }
 
   @override
@@ -96,6 +112,7 @@ class _RegistroFormState extends State<RegistroForm>
   void _submitRojo() {
     if (_formKeyRojo.currentState!.validate()) {
       final kilosRojo = double.parse(_kilosRojoController.text);
+      final userId = context.read<RegistroProvider>().userId ?? '';
 
       final registro = RegistroFinca(
         fecha: _selectedDateRojo,
@@ -106,13 +123,16 @@ class _RegistroFormState extends State<RegistroForm>
         total: 0,
       );
 
-      PreferencesService.instance.addFinca(_fincaRojoController.text.trim());
+      PreferencesService.instance.addFinca(
+        userId,
+        _fincaRojoController.text.trim(),
+      );
 
       context.read<RegistroProvider>().addRegistro(registro);
       _clearFormRojo();
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Kilos rojos registrados')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Kilos rojos registrados')));
     }
   }
 
@@ -121,6 +141,7 @@ class _RegistroFormState extends State<RegistroForm>
       final kilosSeco = double.parse(_kilosSecoController.text);
       final valorUnitario = double.parse(_valorUnitarioController.text);
       final total = kilosSeco * valorUnitario;
+      final userId = context.read<RegistroProvider>().userId ?? '';
 
       final registro = RegistroFinca(
         fecha: _selectedDateSeco,
@@ -131,14 +152,17 @@ class _RegistroFormState extends State<RegistroForm>
         total: total,
       );
 
-      PreferencesService.instance.addFinca(_fincaSecoController.text.trim());
+      PreferencesService.instance.addFinca(
+        userId,
+        _fincaSecoController.text.trim(),
+      );
 
       context.read<RegistroProvider>().addRegistro(registro);
       _clearFormSeco();
       _loadPreferences();
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Kilos secos registrados')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Kilos secos registrados')));
     }
   }
 
@@ -146,8 +170,9 @@ class _RegistroFormState extends State<RegistroForm>
     _kilosRojoController.clear();
     setState(() {
       _selectedDateRojo = DateTime.now();
-      _fechaRojoController.text =
-          DateFormat('yyyy-MM-dd').format(_selectedDateRojo);
+      _fechaRojoController.text = DateFormat(
+        'yyyy-MM-dd',
+      ).format(_selectedDateRojo);
     });
   }
 
@@ -156,8 +181,9 @@ class _RegistroFormState extends State<RegistroForm>
     _kilosSecoController.clear();
     setState(() {
       _selectedDateSeco = DateTime.now();
-      _fechaSecoController.text =
-          DateFormat('yyyy-MM-dd').format(_selectedDateSeco);
+      _fechaSecoController.text = DateFormat(
+        'yyyy-MM-dd',
+      ).format(_selectedDateSeco);
     });
   }
 
@@ -177,10 +203,7 @@ class _RegistroFormState extends State<RegistroForm>
         Expanded(
           child: TabBarView(
             controller: _tabController,
-            children: [
-              _buildRojoForm(),
-              _buildSecoForm(),
-            ],
+            children: [_buildRojoForm(), _buildSecoForm()],
           ),
         ),
       ],
@@ -231,8 +254,9 @@ class _RegistroFormState extends State<RegistroForm>
                 prefixIcon: Icon(Icons.scale, color: Colors.red),
                 hintText: 'Cantidad de kilos de café rojo',
               ),
-              keyboardType:
-                  const TextInputType.numberWithOptions(decimal: true),
+              keyboardType: const TextInputType.numberWithOptions(
+                decimal: true,
+              ),
               inputFormatters: [
                 FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
               ],
@@ -274,10 +298,7 @@ class _RegistroFormState extends State<RegistroForm>
           children: [
             const Text(
               'Café Seco',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-              ),
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
             TextFormField(
@@ -307,8 +328,9 @@ class _RegistroFormState extends State<RegistroForm>
                 prefixIcon: Icon(Icons.scale),
                 hintText: 'Cantidad de kilos de café seco',
               ),
-              keyboardType:
-                  const TextInputType.numberWithOptions(decimal: true),
+              keyboardType: const TextInputType.numberWithOptions(
+                decimal: true,
+              ),
               inputFormatters: [
                 FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
               ],
@@ -332,8 +354,9 @@ class _RegistroFormState extends State<RegistroForm>
                 prefixIcon: Icon(Icons.attach_money),
                 hintText: 'Precio por kilo (min 1000 COP)',
               ),
-              keyboardType:
-                  const TextInputType.numberWithOptions(decimal: true),
+              keyboardType: const TextInputType.numberWithOptions(
+                decimal: true,
+              ),
               inputFormatters: [
                 FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
               ],
@@ -364,8 +387,9 @@ class _RegistroFormState extends State<RegistroForm>
   }
 
   Widget _buildFincaFieldRojo() {
-    final selectedRojo =
-        _fincaRojoController.text.isEmpty ? null : _fincaRojoController.text;
+    final selectedRojo = _fincaRojoController.text.isEmpty
+        ? null
+        : _fincaRojoController.text;
     return DropdownButtonFormField<String>(
       value: selectedRojo,
       decoration: const InputDecoration(
@@ -410,8 +434,9 @@ class _RegistroFormState extends State<RegistroForm>
   }
 
   Widget _buildFincaField() {
-    final selectedSeco =
-        _fincaSecoController.text.isEmpty ? null : _fincaSecoController.text;
+    final selectedSeco = _fincaSecoController.text.isEmpty
+        ? null
+        : _fincaSecoController.text;
     return DropdownButtonFormField<String>(
       value: selectedSeco,
       decoration: const InputDecoration(
@@ -457,6 +482,7 @@ class _RegistroFormState extends State<RegistroForm>
 
   void _showAddFincaDialog({bool isRojo = false}) {
     final controller = TextEditingController();
+    final userId = context.read<RegistroProvider>().userId ?? '';
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -480,9 +506,9 @@ class _RegistroFormState extends State<RegistroForm>
             onPressed: () {
               if (controller.text.trim().isNotEmpty) {
                 final nuevaFinca = controller.text.trim().toUpperCase();
-                PreferencesService.instance.addFinca(nuevaFinca);
+                PreferencesService.instance.addFinca(userId, nuevaFinca);
                 setState(() {
-                  _fincasList = PreferencesService.instance.getFincas();
+                  _fincasList = PreferencesService.instance.getFincas(userId);
                   if (isRojo) {
                     _fincaRojoController.text = nuevaFinca;
                   } else {
