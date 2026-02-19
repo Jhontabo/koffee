@@ -82,18 +82,28 @@ class RegistroProvider extends ChangeNotifier {
             return data['nombre'] as String?;
           })
           .whereType<String>()
+          .toSet()
           .toList();
 
       final fincasFromRegistros = _registros
           .map((r) => r.finca)
-          .where((f) => !_fincas.contains(f))
+          .where((f) => f.isNotEmpty && !_fincas.contains(f))
+          .toSet()
           .toList();
 
       for (final nombre in fincasFromRegistros) {
-        await _fincasCollection.add({'userId': _userId, 'nombre': nombre});
+        final existing = await _fincasCollection
+            .where('userId', isEqualTo: _userId)
+            .where('nombre', isEqualTo: nombre)
+            .get();
+
+        if (existing.docs.isEmpty) {
+          await _fincasCollection.add({'userId': _userId, 'nombre': nombre});
+          _fincas.add(nombre);
+        }
       }
 
-      _fincas = {..._fincas, ...fincasFromRegistros}.toSet().toList();
+      _fincas = _fincas.toSet().toList();
       notifyListeners();
     } catch (e) {
       print('Error cargando fincas: $e');
@@ -104,8 +114,20 @@ class RegistroProvider extends ChangeNotifier {
     if (_userId == null || nombre.trim().isEmpty) return;
 
     try {
-      final trimmed = nombre.trim();
-      if (_fincas.contains(trimmed)) return;
+      final trimmed = nombre.trim().toUpperCase();
+
+      final existing = await _fincasCollection
+          .where('userId', isEqualTo: _userId)
+          .where('nombre', isEqualTo: trimmed)
+          .get();
+
+      if (existing.docs.isNotEmpty) {
+        if (!_fincas.contains(trimmed)) {
+          _fincas.add(trimmed);
+          notifyListeners();
+        }
+        return;
+      }
 
       await _fincasCollection.add({'userId': _userId, 'nombre': trimmed});
 

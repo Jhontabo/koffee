@@ -45,12 +45,14 @@ class _RegistroFormState extends State<RegistroForm>
     final provider = context.read<RegistroProvider>();
     final userId = provider.userId ?? '';
 
-    final uniqueFincas = provider.fincas.toSet().toList();
+    final uniqueFincas = provider.fincas.toSet().toList()..sort();
 
     if (_lastUserId != userId) {
       _lastUserId = userId;
       setState(() {
         _fincasList = uniqueFincas;
+        _fincaRojoController.clear();
+        _fincaSecoController.clear();
         _fechaRojoController.text = DateFormat(
           'yyyy-MM-dd',
         ).format(_selectedDateRojo);
@@ -63,6 +65,8 @@ class _RegistroFormState extends State<RegistroForm>
           uniqueFincas.toSet().difference(_fincasList.toSet()).isNotEmpty) {
         setState(() {
           _fincasList = uniqueFincas;
+          _fincaRojoController.clear();
+          _fincaSecoController.clear();
         });
       }
     }
