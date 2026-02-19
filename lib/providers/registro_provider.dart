@@ -233,6 +233,19 @@ class RegistroProvider extends ChangeNotifier {
     }
   }
 
+  Future<void> updateRegistro(RegistroFinca registro) async {
+    try {
+      if (registro.firebaseId == null) return;
+      await _registrosCollection
+          .doc(registro.firebaseId)
+          .update(registro.toFirestore());
+      await loadRegistros();
+    } catch (e) {
+      _error = e.toString();
+      notifyListeners();
+    }
+  }
+
   Future<void> syncRecords() async {
     // En modo online-first, sync es simplemente recargar
     await loadRegistros();
