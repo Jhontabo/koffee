@@ -205,12 +205,14 @@ class RegistroProvider extends ChangeNotifier {
   Future<void> addRegistro(RegistroFinca registro) async {
     if (_userId == null) {
       _error = 'Usuario no autenticado';
+      print('Error: Usuario no autenticado');
       notifyListeners();
       return;
     }
 
     try {
       final registroConUserId = registro.copyWith(userId: _userId);
+      print('Guardando registro: ${registroConUserId.toFirestore()}');
       await _registrosCollection.add(registroConUserId.toFirestore());
 
       await loadRegistros();
