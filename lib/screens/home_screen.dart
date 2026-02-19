@@ -236,8 +236,11 @@ class _HomeScreenState extends State<HomeScreen> {
               Navigator.pop(ctx);
               await AuthService.instance.signOut();
               if (mounted) {
-                // Force rebuild by setting state
-                setState(() {});
+                Navigator.pushNamedAndRemoveUntil(
+                  context,
+                  '/login',
+                  (route) => false,
+                );
               }
             },
             style: TextButton.styleFrom(foregroundColor: Colors.red),
