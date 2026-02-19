@@ -77,7 +77,7 @@ class RegistroProvider extends ChangeNotifier {
         await _fincasCollection.add({'userId': _userId, 'nombre': nombre});
       }
 
-      _fincas = {..._fincas, ...fincasFromRegistros}.toList();
+      _fincas = {..._fincas, ...fincasFromRegistros}.toSet().toList();
       notifyListeners();
     } catch (e) {
       print('Error cargando fincas: $e');

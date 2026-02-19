@@ -45,10 +45,12 @@ class _RegistroFormState extends State<RegistroForm>
     final provider = context.read<RegistroProvider>();
     final userId = provider.userId ?? '';
 
+    final uniqueFincas = provider.fincas.toSet().toList();
+
     if (_lastUserId != userId) {
       _lastUserId = userId;
       setState(() {
-        _fincasList = provider.fincas;
+        _fincasList = uniqueFincas;
         _fechaRojoController.text = DateFormat(
           'yyyy-MM-dd',
         ).format(_selectedDateRojo);
@@ -57,10 +59,10 @@ class _RegistroFormState extends State<RegistroForm>
         ).format(_selectedDateSeco);
       });
     } else {
-      final fincas = provider.fincas;
-      if (_fincasList.length != fincas.length) {
+      if (_fincasList.toSet().difference(uniqueFincas.toSet()).isNotEmpty ||
+          uniqueFincas.toSet().difference(_fincasList.toSet()).isNotEmpty) {
         setState(() {
-          _fincasList = fincas;
+          _fincasList = uniqueFincas;
         });
       }
     }
@@ -504,7 +506,11 @@ class _RegistroFormState extends State<RegistroForm>
                 final nuevaFinca = controller.text.trim().toUpperCase();
                 context.read<RegistroProvider>().addFinca(nuevaFinca);
                 setState(() {
-                  _fincasList = context.read<RegistroProvider>().fincas;
+                  _fincasList = context
+                      .read<RegistroProvider>()
+                      .fincas
+                      .toSet()
+                      .toList();
                   if (isRojo) {
                     _fincaRojoController.text = nuevaFinca;
                   } else {
