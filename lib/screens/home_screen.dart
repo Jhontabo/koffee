@@ -9,6 +9,7 @@ import '../widgets/registro_form.dart';
 import '../widgets/registro_list_view.dart';
 import '../widgets/kilos_bar_chart.dart';
 import 'fincas_screen.dart';
+import 'perfil_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -25,6 +26,7 @@ class _HomeScreenState extends State<HomeScreen> {
     'Registros',
     'Fincas',
     'Gráfica',
+    'Perfil',
   ];
 
   void _onItemTapped(int index) {
@@ -94,6 +96,7 @@ class _HomeScreenState extends State<HomeScreen> {
           RegistroListView(),
           FincasScreen(),
           KilosBarChart(),
+          PerfilScreen(),
         ],
       ),
       bottomNavigationBar: Container(
@@ -130,6 +133,11 @@ class _HomeScreenState extends State<HomeScreen> {
               icon: Icon(Icons.insert_chart_outlined),
               selectedIcon: Icon(Icons.insert_chart),
               label: 'Gráfica',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.person_outlined),
+              selectedIcon: Icon(Icons.person),
+              label: 'Perfil',
             ),
           ],
         ),
