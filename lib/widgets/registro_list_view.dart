@@ -146,31 +146,7 @@ class _RegistroCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final currencyFormat = NumberFormat.currency(
-      symbol: '\$',
-      decimalDigits: 0,
-    );
-
-    final isRojo = registro.kilosRojo > 0;
-    final isSeco = registro.kilosSeco > 0;
-
-    Color typeColor;
-    IconData typeIcon;
-    String typeLabel;
-
-    if (isRojo && !isSeco) {
-      typeColor = Colors.red.shade700;
-      typeIcon = Icons.circle;
-      typeLabel = "Café Rojo";
-    } else if (isSeco && !isRojo) {
-      typeColor = Colors.brown.shade600;
-      typeIcon = Icons.grain;
-      typeLabel = "Café Seco";
-    } else {
-      typeColor = Colors.purple;
-      typeIcon = Icons.merge_type;
-      typeLabel = "Mixto";
-    }
+    final dateFormat = DateFormat('dd/MM/yyyy', 'es');
 
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
@@ -190,13 +166,12 @@ class _RegistroCard extends StatelessWidget {
                 width: 48,
                 height: 48,
                 decoration: BoxDecoration(
-                  color: typeColor.withOpacity(0.1),
+                  color: Colors.red.shade100,
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: Icon(typeIcon, color: typeColor),
+                child: Icon(Icons.circle, color: Colors.red.shade700),
               ),
               const SizedBox(width: 12),
-
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -211,14 +186,13 @@ class _RegistroCard extends StatelessWidget {
                             fontSize: 16,
                           ),
                         ),
-                        if (isSeco)
-                          Text(
-                            currencyFormat.format(registro.total),
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              color: Colors.green,
-                            ),
+                        Text(
+                          '${registro.kilosRojo} kg',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: Colors.red.shade700,
                           ),
+                        ),
                       ],
                     ),
                     const SizedBox(height: 4),
@@ -230,13 +204,13 @@ class _RegistroCard extends StatelessWidget {
                             vertical: 2,
                           ),
                           decoration: BoxDecoration(
-                            color: typeColor.withOpacity(0.1),
+                            color: Colors.red.shade100,
                             borderRadius: BorderRadius.circular(4),
                           ),
                           child: Text(
-                            typeLabel,
+                            'Café Rojo',
                             style: TextStyle(
-                              color: typeColor,
+                              color: Colors.red.shade700,
                               fontSize: 10,
                               fontWeight: FontWeight.bold,
                             ),
@@ -244,10 +218,11 @@ class _RegistroCard extends StatelessWidget {
                         ),
                         const SizedBox(width: 8),
                         Text(
-                          isRojo
-                              ? '${registro.kilosRojo} kg'
-                              : '${registro.kilosSeco} kg',
-                          style: TextStyle(color: Colors.grey.shade700),
+                          dateFormat.format(registro.fecha),
+                          style: TextStyle(
+                            color: Colors.grey.shade600,
+                            fontSize: 12,
+                          ),
                         ),
                         const Spacer(),
                         if (!registro.isSynced)
@@ -285,20 +260,16 @@ class _RegistroCard extends StatelessWidget {
   }
 
   void _showSummaryDialog(BuildContext context) {
-    final currencyFormat = NumberFormat.currency(
-      symbol: '\$',
-      decimalDigits: 0,
-    );
     final dateFormat = DateFormat('dd/MM/yyyy', 'es');
 
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Row(
+        title: const Row(
           children: [
-            const Icon(Icons.info_outline, color: Colors.blue),
-            const SizedBox(width: 8),
-            const Text('Detalles del Registro'),
+            Icon(Icons.info_outline, color: Colors.red),
+            SizedBox(width: 8),
+            Text('Detalles del Registro'),
           ],
         ),
         content: SingleChildScrollView(
@@ -308,16 +279,7 @@ class _RegistroCard extends StatelessWidget {
             children: [
               _detailRow('Finca', registro.finca.toUpperCase()),
               _detailRow('Fecha', dateFormat.format(registro.fecha)),
-              if (registro.kilosRojo > 0)
-                _detailRow('Kilos Rojo', '${registro.kilosRojo} kg'),
-              if (registro.kilosSeco > 0) ...[
-                _detailRow('Kilos Seco', '${registro.kilosSeco} kg'),
-                _detailRow(
-                  'Valor Unitario',
-                  currencyFormat.format(registro.valorUnitario),
-                ),
-                _detailRow('Total', currencyFormat.format(registro.total)),
-              ],
+              _detailRow('Kilos', '${registro.kilosRojo} kg'),
               _detailRow('Sincronizado', registro.isSynced ? 'Sí' : 'No'),
             ],
           ),
@@ -345,16 +307,20 @@ class _RegistroCard extends StatelessWidget {
     );
   }
 
-  void _showEditDialog(BuildContext context) {
-    Navigator.pop(context);
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (ctx) => _EditRegistroSheet(registro: registro),
-    );
+  void _showEditDialog(BuildContext ctx) {
+    Navigator.pop(ctx);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (ctx.mounted) {
+        showModalBottomSheet(
+          context: ctx,
+          isScrollControlled: true,
+          shape: const RoundedRectangleBorder(
+            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          builder: (sheetContext) => _EditRegistroSheet(registro: registro),
+        );
+      }
+    });
   }
 
   void _showDeleteConfirmation(BuildContext context) {
@@ -405,42 +371,17 @@ class _EditRegistroSheet extends StatefulWidget {
 
 class _EditRegistroSheetState extends State<_EditRegistroSheet> {
   late TextEditingController _fincaController;
-  late TextEditingController _kilosRojoController;
-  late TextEditingController _kilosSecoController;
-  late TextEditingController _valorUnitarioController;
+  late TextEditingController _kilosController;
   late DateTime _selectedDate;
   final _formKey = GlobalKey<FormState>();
-
-  // Tipo de registro
-  late bool isRojo;
-  late bool isSeco;
-  late bool isMixto;
 
   @override
   void initState() {
     super.initState();
-
-    // Usar getters del modelo
-    isRojo = widget.registro.isRojo;
-    isSeco = widget.registro.isSeco;
-    isMixto = widget.registro.isMixto;
-
     _fincaController = TextEditingController(text: widget.registro.finca);
-    _kilosRojoController = TextEditingController(
+    _kilosController = TextEditingController(
       text: widget.registro.kilosRojo > 0
           ? widget.registro.kilosRojo.toString()
-          : '0',
-    );
-    _kilosSecoController = TextEditingController(
-      text: widget.registro.kilosSeco > 0
-          ? widget.registro.kilosSeco.toString()
-          : '0',
-    );
-    _valorUnitarioController = TextEditingController(
-      text:
-          (widget.registro.valorUnitario != null &&
-              widget.registro.valorUnitario! > 0)
-          ? widget.registro.valorUnitario.toString()
           : '0',
     );
     _selectedDate = widget.registro.fecha;
@@ -449,9 +390,7 @@ class _EditRegistroSheetState extends State<_EditRegistroSheet> {
   @override
   void dispose() {
     _fincaController.dispose();
-    _kilosRojoController.dispose();
-    _kilosSecoController.dispose();
-    _valorUnitarioController.dispose();
+    _kilosController.dispose();
     super.dispose();
   }
 
@@ -471,20 +410,13 @@ class _EditRegistroSheetState extends State<_EditRegistroSheet> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Row(
+              const Row(
                 children: [
-                  const Icon(Icons.edit, color: Colors.blue),
-                  const SizedBox(width: 8),
+                  Icon(Icons.edit, color: Colors.red),
+                  SizedBox(width: 8),
                   Text(
-                    isRojo
-                        ? 'Editar Café Rojo'
-                        : isMixto
-                        ? 'Editar Registro Mixto'
-                        : 'Editar Café Seco',
-                    style: const TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    'Editar Café Rojo',
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                   ),
                 ],
               ),
@@ -518,67 +450,24 @@ class _EditRegistroSheetState extends State<_EditRegistroSheet> {
                 ),
               ),
               const SizedBox(height: 12),
-              // Mostrar campo de kilos rojos si es rojo o mixto
-              if (isRojo || isMixto)
-                TextFormField(
-                  controller: _kilosRojoController,
-                  decoration: const InputDecoration(
-                    labelText: 'Kilos Rojos',
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.circle, color: Colors.red),
-                  ),
-                  keyboardType: TextInputType.number,
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Ingrese los kilos';
-                    }
-                    if (double.tryParse(value) == null) {
-                      return 'Ingrese un número válido';
-                    }
-                    return null;
-                  },
+              TextFormField(
+                controller: _kilosController,
+                decoration: const InputDecoration(
+                  labelText: 'Kilos',
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.scale, color: Colors.red),
                 ),
-              // Mostrar campo de kilos secos si es seco o mixto
-              if (isSeco || isMixto) ...[
-                const SizedBox(height: 12),
-                TextFormField(
-                  controller: _kilosSecoController,
-                  decoration: const InputDecoration(
-                    labelText: 'Kilos Secos',
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.wb_sunny),
-                  ),
-                  keyboardType: TextInputType.number,
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Ingrese los kilos';
-                    }
-                    if (double.tryParse(value) == null) {
-                      return 'Ingrese un número válido';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 12),
-                TextFormField(
-                  controller: _valorUnitarioController,
-                  decoration: const InputDecoration(
-                    labelText: 'Valor Unitario',
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.attach_money),
-                  ),
-                  keyboardType: TextInputType.number,
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Ingrese el valor';
-                    }
-                    if (double.tryParse(value) == null) {
-                      return 'Ingrese un número válido';
-                    }
-                    return null;
-                  },
-                ),
-              ],
+                keyboardType: TextInputType.number,
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Ingrese los kilos';
+                  }
+                  if (double.tryParse(value) == null) {
+                    return 'Ingrese un número válido';
+                  }
+                  return null;
+                },
+              ),
               const SizedBox(height: 20),
               Row(
                 children: [
@@ -592,6 +481,9 @@ class _EditRegistroSheetState extends State<_EditRegistroSheet> {
                   Expanded(
                     child: FilledButton(
                       onPressed: _saveChanges,
+                      style: FilledButton.styleFrom(
+                        backgroundColor: Colors.red,
+                      ),
                       child: const Text('Guardar'),
                     ),
                   ),
@@ -621,38 +513,19 @@ class _EditRegistroSheetState extends State<_EditRegistroSheet> {
 
   void _saveChanges() {
     if (_formKey.currentState!.validate()) {
-      final isRojo = widget.registro.kilosRojo > 0;
-
-      double kilosRojo = 0;
-      double kilosSeco = 0;
-      double valorUnitario = 0;
-      double total = 0;
-
-      // Calcular kilos según el tipo
-      if (isRojo) {
-        kilosRojo = double.tryParse(_kilosRojoController.text) ?? 0;
-      } else if (isSeco) {
-        kilosSeco = double.tryParse(_kilosSecoController.text) ?? 0;
-        valorUnitario = double.tryParse(_valorUnitarioController.text) ?? 0;
-        total = kilosSeco * valorUnitario;
-      } else if (isMixto) {
-        kilosRojo = double.tryParse(_kilosRojoController.text) ?? 0;
-        kilosSeco = double.tryParse(_kilosSecoController.text) ?? 0;
-        valorUnitario = double.tryParse(_valorUnitarioController.text) ?? 0;
-        total = kilosSeco * valorUnitario;
-      }
+      final kilos = double.tryParse(_kilosController.text) ?? 0;
 
       final updatedRegistro = widget.registro.copyWith(
         fecha: _selectedDate,
         finca: _fincaController.text.trim(),
-        kilosRojo: kilosRojo,
-        kilosSeco: kilosSeco,
-        valorUnitario: valorUnitario,
-        total: total,
+        kilosRojo: kilos,
         isSynced: false,
       );
 
-      context.read<RegistroProvider>().updateRegistro(updatedRegistro);
+      Provider.of<RegistroProvider>(
+        context,
+        listen: false,
+      ).updateRegistro(updatedRegistro);
       Navigator.pop(context);
     }
   }

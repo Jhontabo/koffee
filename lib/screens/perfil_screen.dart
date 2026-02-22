@@ -89,11 +89,6 @@ class _PerfilScreenState extends State<PerfilScreen> {
       0,
       (sum, r) => sum + r.kilosRojo,
     );
-    final totalKilosSeco = registros.fold<double>(
-      0,
-      (sum, r) => sum + r.kilosSeco,
-    );
-    final totalValor = registros.fold<double>(0, (sum, r) => sum + r.total);
 
     return Card(
       elevation: 2,
@@ -131,18 +126,6 @@ class _PerfilScreenState extends State<PerfilScreen> {
               label: 'Kilos Rojos',
               value: '${totalKilosRojo.toStringAsFixed(1)} kg',
               color: Colors.red,
-            ),
-            _buildStatRow(
-              icon: Icons.wb_sunny,
-              label: 'Kilos Secos',
-              value: '${totalKilosSeco.toStringAsFixed(1)} kg',
-              color: Colors.amber[800],
-            ),
-            _buildStatRow(
-              icon: Icons.attach_money,
-              label: 'Valor Total',
-              value: '\$${NumberFormat('#,###').format(totalValor)} COP',
-              color: Colors.green[700],
             ),
           ],
         ),

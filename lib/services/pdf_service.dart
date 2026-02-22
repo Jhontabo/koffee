@@ -13,42 +13,41 @@ class PdfService {
     required DateTime endDate,
   }) async {
     final pdf = pw.Document();
-    
+
     // Load fonts (using standard fonts for simplicity)
     final fontRegular = await PdfGoogleFonts.openSansRegular();
     final fontBold = await PdfGoogleFonts.openSansBold();
 
     // Calculate totals
     double totalRojo = 0;
-    double totalSeco = 0;
-    double totalDinero = 0;
 
     for (var reg in registros) {
       totalRojo += reg.kilosRojo;
-      totalSeco += reg.kilosSeco;
-      totalDinero += reg.total;
     }
 
     // Format numbers
-    final currencyFormat = NumberFormat.currency(symbol: '\$', decimalDigits: 0);
+    final currencyFormat = NumberFormat.currency(
+      symbol: '\$',
+      decimalDigits: 0,
+    );
     final dateFormat = DateFormat('dd/MM/yyyy');
 
     pdf.addPage(
       pw.MultiPage(
         pageFormat: PdfPageFormat.a4,
         margin: const pw.EdgeInsets.all(32),
-        theme: pw.ThemeData.withFont(
-          base: fontRegular,
-          bold: fontBold,
-        ),
+        theme: pw.ThemeData.withFont(base: fontRegular, bold: fontBold),
         build: (context) => [
           _buildHeader(title, startDate, endDate),
           pw.SizedBox(height: 20),
-          _buildSummary(totalRojo, totalSeco, totalDinero, currencyFormat),
+          _buildSummary(totalRojo, currencyFormat),
           pw.SizedBox(height: 20),
-          pw.Text('Detalle de Registros', style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold)),
+          pw.Text(
+            'Detalle de Registros',
+            style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold),
+          ),
           pw.SizedBox(height: 10),
-          _buildTable(registros, dateFormat, currencyFormat),
+          _buildTable(registros, dateFormat),
           pw.SizedBox(height: 20),
           _buildFooter(),
         ],
@@ -58,7 +57,8 @@ class PdfService {
     // Share directly (WhatsApp, Email, etc.)
     await Printing.sharePdf(
       bytes: await pdf.save(),
-      filename: 'Reporte_Koffee_${DateFormat('yyyyMMdd').format(DateTime.now())}.pdf',
+      filename:
+          'Reporte_Koffee_${DateFormat('yyyyMMdd').format(DateTime.now())}.pdf',
     );
   }
 
@@ -68,7 +68,11 @@ class PdfService {
       children: [
         pw.Text(
           'Koffee - Registro Agrícola',
-          style: pw.TextStyle(fontSize: 24, fontWeight: pw.FontWeight.bold, color: PdfColors.brown900),
+          style: pw.TextStyle(
+            fontSize: 24,
+            fontWeight: pw.FontWeight.bold,
+            color: PdfColors.brown900,
+          ),
         ),
         pw.SizedBox(height: 8),
         pw.Text(
@@ -84,7 +88,7 @@ class PdfService {
     );
   }
 
-  static pw.Widget _buildSummary(double rojo, double seco, double dinero, NumberFormat currency) {
+  static pw.Widget _buildSummary(double rojo, NumberFormat currency) {
     return pw.Container(
       padding: const pw.EdgeInsets.all(12),
       decoration: pw.BoxDecoration(
@@ -93,51 +97,64 @@ class PdfService {
         color: PdfColors.grey50,
       ),
       child: pw.Row(
-        mainAxisAlignment: pw.MainAxisAlignment.spaceAround, // Distribute evenly
+        mainAxisAlignment: pw.MainAxisAlignment.spaceAround,
         children: [
-          _buildSummaryItem('Total Café Rojo', '${rojo.toStringAsFixed(2)} kg', PdfColors.red800),
-          _buildSummaryItem('Total Café Seco', '${seco.toStringAsFixed(2)} kg', PdfColors.brown800),
-          _buildSummaryItem('Total Dinero', currency.format(dinero), PdfColors.green800),
+          _buildSummaryItem(
+            'Total Café Rojo',
+            '${rojo.toStringAsFixed(2)} kg',
+            PdfColors.red800,
+          ),
         ],
       ),
     );
   }
 
-  static pw.Widget _buildSummaryItem(String label, String value, PdfColor color) {
+  static pw.Widget _buildSummaryItem(
+    String label,
+    String value,
+    PdfColor color,
+  ) {
     return pw.Column(
       children: [
-        pw.Text(label, style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey700)),
+        pw.Text(
+          label,
+          style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey700),
+        ),
         pw.SizedBox(height: 4),
-        pw.Text(value, style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold, color: color)),
+        pw.Text(
+          value,
+          style: pw.TextStyle(
+            fontSize: 14,
+            fontWeight: pw.FontWeight.bold,
+            color: color,
+          ),
+        ),
       ],
     );
   }
 
-  static pw.Widget _buildTable(List<RegistroFinca> registros, DateFormat dateFormat, NumberFormat currency) {
+  static pw.Widget _buildTable(
+    List<RegistroFinca> registros,
+    DateFormat dateFormat,
+  ) {
     return pw.Table.fromTextArray(
-      headers: ['Fecha', 'Finca', 'Tipo', 'Kilos', 'Valor/Total'],
+      headers: ['Fecha', 'Finca', 'Kilos'],
       data: registros.map((reg) {
-        final isRojo = reg.kilosRojo > 0;
-        final tipo = isRojo ? 'Rojo' : 'Seco';
-        final kilos = isRojo ? reg.kilosRojo : reg.kilosSeco;
-        final valorInfo = isRojo ? '-' : '${currency.format(reg.total)}'; // Only show money for Seco usually unless huge logic
-
         return [
           dateFormat.format(reg.fecha),
           reg.finca,
-          tipo, // Simple text
-          '${kilos.toStringAsFixed(2)} kg',
-          valorInfo,
+          '${reg.kilosRojo.toStringAsFixed(2)} kg',
         ];
       }).toList(),
-      headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold, color: PdfColors.white),
+      headerStyle: pw.TextStyle(
+        fontWeight: pw.FontWeight.bold,
+        color: PdfColors.white,
+      ),
       headerDecoration: const pw.BoxDecoration(color: PdfColors.brown900),
-      rowDecoration: const pw.BoxDecoration(border: pw.Border(bottom: pw.BorderSide(color: PdfColors.grey200))),
+      rowDecoration: const pw.BoxDecoration(
+        border: pw.Border(bottom: pw.BorderSide(color: PdfColors.grey200)),
+      ),
       cellAlignment: pw.Alignment.centerLeft,
-      cellAlignments: {
-        3: pw.Alignment.centerRight, // Kilos aligned right
-        4: pw.Alignment.centerRight, // Total aligned right
-      },
     );
   }
 
@@ -149,8 +166,14 @@ class PdfService {
         pw.Row(
           mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
           children: [
-            pw.Text('Generado por App Koffee', style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey500)),
-            pw.Text(DateFormat('dd/MM/yyyy HH:mm').format(DateTime.now()), style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey500)),
+            pw.Text(
+              'Generado por App Koffee',
+              style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey500),
+            ),
+            pw.Text(
+              DateFormat('dd/MM/yyyy HH:mm').format(DateTime.now()),
+              style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey500),
+            ),
           ],
         ),
       ],

@@ -74,10 +74,6 @@ class SyncService {
           fecha: DateTime.parse(data['fecha'] as String),
           finca: data['finca'] as String,
           kilosRojo: (data['kilosRojo'] as num?)?.toDouble() ?? 0.0,
-          kilosSeco: (data['kilosSeco'] as num?)?.toDouble() ?? 0.0,
-          valorUnitario: (data['valorUnitario'] as num?)?.toDouble() ?? 0.0,
-          total: (data['total'] as num?)?.toDouble() ?? 0.0,
-          // We don't care about isSynced/id here as upsert handles it
           firebaseId: doc.id,
         );
 

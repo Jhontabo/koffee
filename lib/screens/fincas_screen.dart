@@ -3,7 +3,6 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../models/finca.dart';
 import '../providers/registro_provider.dart';
-import '../services/database_helper.dart';
 
 class FincasScreen extends StatefulWidget {
   const FincasScreen({super.key});
