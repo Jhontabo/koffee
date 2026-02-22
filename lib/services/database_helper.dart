@@ -130,7 +130,9 @@ class DatabaseHelper {
       if (existing.isNotEmpty) {
         final localId = existing.first['id'] as int;
         final map = registro.toMap();
+        map['id'] = localId;
         map['isSynced'] = 1;
+        map.remove('firebaseId');
         return await db.update(
           'registros',
           map,

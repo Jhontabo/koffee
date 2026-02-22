@@ -654,9 +654,6 @@ class _EditRegistroSheetState extends State<_EditRegistroSheet> {
 
       context.read<RegistroProvider>().updateRegistro(updatedRegistro);
       Navigator.pop(context);
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Registro actualizado')));
     }
   }
 }
