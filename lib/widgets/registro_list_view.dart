@@ -284,10 +284,11 @@ class _RegistroCard extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text('$label:', style: const TextStyle(fontWeight: FontWeight.bold)),
-          Text(value),
+          const SizedBox(width: 8),
+          Expanded(child: Text(value, textAlign: TextAlign.end)),
         ],
       ),
     );
@@ -327,11 +328,14 @@ class _RegistroCard extends StatelessWidget {
                     children: [
                       Icon(Icons.home, size: 16, color: Colors.red.shade700),
                       const SizedBox(width: 4),
-                      Text(
-                        registro.finca.toUpperCase(),
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: Colors.red.shade700,
+                      Expanded(
+                        child: Text(
+                          registro.finca.toUpperCase(),
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: Colors.red.shade700,
+                          ),
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                     ],
