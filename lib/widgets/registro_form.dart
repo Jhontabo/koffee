@@ -255,20 +255,7 @@ class _RegistroFormState extends State<RegistroForm>
             ),
             const SizedBox(height: 24),
             ElevatedButton.icon(
-              onPressed: () {
-                // Navegar a la pestaña de fincas (índice 2)
-                try {
-                  final homeState = context.findAncestorStateOfType<State>();
-                  if (homeState != null && homeState.mounted) {
-                    final homeScreenState = homeState as dynamic;
-                    if (homeScreenState.navigateToTab != null) {
-                      homeScreenState.navigateToTab(2);
-                    }
-                  }
-                } catch (e) {
-                  // Ignorar errores de navegación
-                }
-              },
+              onPressed: () => _showAddFincaDialog(context),
               icon: const Icon(Icons.add),
               label: const Text('Agregar Finca'),
               style: ElevatedButton.styleFrom(
@@ -539,6 +526,88 @@ class _RegistroFormState extends State<RegistroForm>
         }
         return null;
       },
+    );
+  }
+
+  void _showAddFincaDialog(BuildContext ctx) {
+    final nombreController = TextEditingController();
+    final ubicacionController = TextEditingController();
+    final tamanoController = TextEditingController();
+
+    showDialog(
+      context: ctx,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Agregar Finca'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: nombreController,
+                decoration: const InputDecoration(
+                  labelText: 'Nombre de la finca *',
+                  border: OutlineInputBorder(),
+                  hintText: 'Ej: LA ESPERANZA',
+                ),
+                textCapitalization: TextCapitalization.characters,
+                autofocus: true,
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: ubicacionController,
+                decoration: const InputDecoration(
+                  labelText: 'Ubicación (vereda/municipio)',
+                  border: OutlineInputBorder(),
+                  hintText: 'Ej: Vereda El Porvenir',
+                ),
+                textCapitalization: TextCapitalization.words,
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: tamanoController,
+                decoration: const InputDecoration(
+                  labelText: 'Tamaño (hectáreas)',
+                  border: OutlineInputBorder(),
+                  hintText: 'Ej: 5.5',
+                  suffixText: 'ha',
+                ),
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Cancelar'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              if (nombreController.text.trim().isNotEmpty) {
+                final userId = context.read<RegistroProvider>().userId ?? '';
+                final nuevaFinca = Finca(
+                  userId: userId,
+                  nombre: nombreController.text.trim().toUpperCase(),
+                  ubicacion: ubicacionController.text.trim().isEmpty
+                      ? null
+                      : ubicacionController.text.trim().toUpperCase(),
+                  tamanoHectareas: tamanoController.text.trim().isEmpty
+                      ? null
+                      : double.tryParse(tamanoController.text),
+                );
+                context.read<RegistroProvider>().addFinca(nuevaFinca);
+                Navigator.pop(dialogContext);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Finca agregada correctamente')),
+                );
+              }
+            },
+            child: const Text('Agregar'),
+          ),
+        ],
+      ),
     );
   }
 }
