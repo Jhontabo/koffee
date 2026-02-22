@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../models/registro_finca.dart';
+import '../models/finca.dart';
 import '../providers/registro_provider.dart';
 
 class RegistroForm extends StatefulWidget {
@@ -538,7 +539,9 @@ class _RegistroFormState extends State<RegistroForm>
           ElevatedButton(
             onPressed: () {
               if (controller.text.trim().isNotEmpty) {
-                final nuevaFinca = controller.text.trim().toUpperCase();
+                final nombreFinca = controller.text.trim().toUpperCase();
+                final userId = context.read<RegistroProvider>().userId ?? '';
+                final nuevaFinca = Finca(userId: userId, nombre: nombreFinca);
                 context.read<RegistroProvider>().addFinca(nuevaFinca);
                 setState(() {
                   _fincasList = context
@@ -547,9 +550,9 @@ class _RegistroFormState extends State<RegistroForm>
                       .toSet()
                       .toList();
                   if (isRojo) {
-                    _fincaRojoController.text = nuevaFinca;
+                    _fincaRojoController.text = nombreFinca;
                   } else {
-                    _fincaSecoController.text = nuevaFinca;
+                    _fincaSecoController.text = nombreFinca;
                   }
                 });
                 Navigator.pop(context);

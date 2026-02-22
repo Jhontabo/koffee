@@ -8,6 +8,7 @@ import '../models/registro_finca.dart';
 import '../widgets/registro_form.dart';
 import '../widgets/registro_list_view.dart';
 import '../widgets/kilos_bar_chart.dart';
+import 'fincas_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -19,12 +20,19 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   int _selectedIndex = 0;
 
-  final List<String> _titles = const ['Inicio', 'Registros', 'Gráfica'];
+  final List<String> _titles = const [
+    'Inicio',
+    'Registros',
+    'Fincas',
+    'Gráfica',
+  ];
 
   void _onItemTapped(int index) {
     if (index != _selectedIndex) {
       if (index == 1) {
         context.read<RegistroProvider>().loadRegistros();
+      } else if (index == 2) {
+        context.read<RegistroProvider>().loadFincas();
       }
       setState(() {
         _selectedIndex = index;
@@ -81,7 +89,12 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
       body: IndexedStack(
         index: _selectedIndex,
-        children: const [RegistroForm(), RegistroListView(), KilosBarChart()],
+        children: const [
+          RegistroForm(),
+          RegistroListView(),
+          FincasScreen(),
+          KilosBarChart(),
+        ],
       ),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
@@ -107,6 +120,11 @@ class _HomeScreenState extends State<HomeScreen> {
               icon: Icon(Icons.assignment_outlined),
               selectedIcon: Icon(Icons.assignment),
               label: 'Registros',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.landscape_outlined),
+              selectedIcon: Icon(Icons.landscape),
+              label: 'Fincas',
             ),
             NavigationDestination(
               icon: Icon(Icons.insert_chart_outlined),

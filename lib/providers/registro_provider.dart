@@ -2,13 +2,17 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/registro_finca.dart';
+import '../models/finca.dart';
 import '../services/auth_service.dart';
 import '../services/usuario_service.dart';
+import '../services/database_helper.dart';
+import '../services/sync_service.dart';
 
 class RegistroProvider extends ChangeNotifier {
   List<RegistroFinca> _registros = [];
   Map<String, double> _kilosByFinca = {};
-  List<String> _fincas = [];
+  List<String> _fincasNames = [];
+  List<Finca> _fincas = [];
   bool _isLoading = false;
   String? _error;
   String? _userId;
@@ -22,7 +26,8 @@ class RegistroProvider extends ChangeNotifier {
 
   List<RegistroFinca> get registros => _registros;
   Map<String, double> get kilosByFinca => _kilosByFinca;
-  List<String> get fincas => _fincas;
+  List<String> get fincas => _fincasNames;
+  List<Finca> get fincasList => _fincas;
   bool get isLoading => _isLoading;
   String? get error => _error;
   String? get userId => _userId;
@@ -41,11 +46,13 @@ class RegistroProvider extends ChangeNotifier {
         await _cargarUsuario();
         await loadRegistros();
         await loadFincas();
+        await SyncService.instance.syncAllRecords();
       } else {
         _userId = null;
         _rol = 'usuario';
         _registros = [];
         _fincas = [];
+        _fincasNames = [];
         _kilosByFinca = {};
         notifyListeners();
       }
@@ -71,90 +78,70 @@ class RegistroProvider extends ChangeNotifier {
     if (_userId == null) return;
 
     try {
-      final snapshot = await _fincasCollection
-          .where('userId', isEqualTo: _userId)
-          .get();
-
-      _fincas = snapshot.docs
-          .map((doc) {
-            final data = doc.data() as Map<String, dynamic>?;
-            if (data == null) return null;
-            return data['nombre'] as String?;
-          })
-          .whereType<String>()
-          .toSet()
-          .toList();
-
-      final fincasFromRegistros = _registros
-          .map((r) => r.finca)
-          .where((f) => f.isNotEmpty && !_fincas.contains(f))
-          .toSet()
-          .toList();
-
-      for (final nombre in fincasFromRegistros) {
-        final existing = await _fincasCollection
-            .where('userId', isEqualTo: _userId)
-            .where('nombre', isEqualTo: nombre)
-            .get();
-
-        if (existing.docs.isEmpty) {
-          await _fincasCollection.add({'userId': _userId, 'nombre': nombre});
-          _fincas.add(nombre);
-        }
-      }
-
-      _fincas = _fincas.toSet().toList();
+      _fincas = await DatabaseHelper.instance.getAllFincas(_userId!);
+      _fincasNames = _fincas.map((f) => f.nombre).toList();
       notifyListeners();
     } catch (e) {
       print('Error cargando fincas: $e');
     }
   }
 
-  Future<void> addFinca(String nombre) async {
-    if (_userId == null || nombre.trim().isEmpty) return;
+  Future<void> addFinca(Finca nuevaFinca) async {
+    if (_userId == null) return;
 
     try {
-      final trimmed = nombre.trim().toUpperCase();
+      final existing = await DatabaseHelper.instance.getFincaByName(
+        _userId!,
+        nuevaFinca.nombre.toUpperCase(),
+      );
 
-      final existing = await _fincasCollection
-          .where('userId', isEqualTo: _userId)
-          .where('nombre', isEqualTo: trimmed)
-          .get();
-
-      if (existing.docs.isNotEmpty) {
-        if (!_fincas.contains(trimmed)) {
-          _fincas.add(trimmed);
-          notifyListeners();
-        }
+      if (existing != null) {
         return;
       }
 
-      await _fincasCollection.add({'userId': _userId, 'nombre': trimmed});
+      final fibra = nuevaFinca.copyWith(
+        userId: _userId,
+        nombre: nuevaFinca.nombre.toUpperCase(),
+      );
 
-      _fincas.add(trimmed);
-      notifyListeners();
+      await DatabaseHelper.instance.insertFinca(fibra);
+      await SyncService.instance.syncUnsyncedFincas();
+      await loadFincas();
     } catch (e) {
       print('Error guardando finca: $e');
     }
   }
 
-  Future<void> removeFinca(String nombre) async {
+  Future<void> updateFinca(Finca fibra) async {
     if (_userId == null) return;
 
     try {
-      final snapshot = await _fincasCollection
-          .where('userId', isEqualTo: _userId)
-          .where('nombre', isEqualTo: nombre)
-          .get();
+      await DatabaseHelper.instance.updateFinca(fibra);
+      await SyncService.instance.syncUnsyncedFincas();
+      await loadFincas();
+    } catch (e) {
+      print('Error actualizando finca: $e');
+    }
+  }
 
-      for (final doc in snapshot.docs) {
-        await doc.reference.delete();
-      }
+  Future<void> removeFinca(Finca fibra) async {
+    if (_userId == null || fibra.id == null) return;
 
-      _fincas.remove(nombre);
-      notifyListeners();
+    try {
+      await DatabaseHelper.instance.deleteFinca(fibra.id!);
+      await loadFincas();
     } catch (e) {
       print('Error eliminando finca: $e');
+    }
+  }
+
+  Finca? getFincaByName(String nombre) {
+    try {
+      return _fincas.firstWhere(
+        (f) => f.nombre.toUpperCase() == nombre.toUpperCase(),
+      );
+    } catch (_) {
+      return null;
     }
   }
 
@@ -171,31 +158,12 @@ class RegistroProvider extends ChangeNotifier {
     }
 
     try {
-      final snapshot = await _registrosCollection
-          .where('userId', isEqualTo: _userId)
-          .get();
-
-      _registros = snapshot.docs.map((doc) {
-        final data = doc.data() as Map<String, dynamic>;
-        return RegistroFinca(
-          id: null,
-          userId: data['userId'] as String? ?? '',
-          firebaseId: doc.id,
-          fecha: DateTime.parse(data['fecha'] as String),
-          finca: data['finca'] as String,
-          kilosRojo: (data['kilosRojo'] as num?)?.toDouble() ?? 0.0,
-          kilosSeco: (data['kilosSeco'] as num?)?.toDouble() ?? 0.0,
-          valorUnitario: (data['valorUnitario'] as num?)?.toDouble() ?? 0.0,
-          total: (data['total'] as num?)?.toDouble() ?? 0.0,
-          isSynced: true,
-        );
-      }).toList();
-
+      _registros = await DatabaseHelper.instance.getAllRegistros(_userId!);
       _registros.sort((a, b) => b.fecha.compareTo(a.fecha));
       _calculateKilosByFinca();
     } catch (e) {
       _error = e.toString();
-      print('Error cargando de Firebase: $e');
+      print('Error cargando registros: $e');
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -212,20 +180,19 @@ class RegistroProvider extends ChangeNotifier {
 
     try {
       final registroConUserId = registro.copyWith(userId: _userId);
-      print('Guardando registro: ${registroConUserId.toFirestore()}');
-      await _registrosCollection.add(registroConUserId.toFirestore());
-
+      await DatabaseHelper.instance.insertRegistro(registroConUserId);
+      await SyncService.instance.syncUnsyncedRecords();
       await loadRegistros();
     } catch (e) {
       _error = e.toString();
-      print('Error guardando en Firebase: $e');
+      print('Error guardando registro: $e');
       notifyListeners();
     }
   }
 
-  Future<void> deleteRegistro(String firebaseId) async {
+  Future<void> deleteRegistro(int id) async {
     try {
-      await _registrosCollection.doc(firebaseId).delete();
+      await DatabaseHelper.instance.deleteRegistro(id);
       await loadRegistros();
     } catch (e) {
       _error = e.toString();
@@ -235,10 +202,9 @@ class RegistroProvider extends ChangeNotifier {
 
   Future<void> updateRegistro(RegistroFinca registro) async {
     try {
-      if (registro.firebaseId == null) return;
-      await _registrosCollection
-          .doc(registro.firebaseId)
-          .update(registro.toFirestore());
+      if (registro.id == null) return;
+      await DatabaseHelper.instance.updateRegistro(registro);
+      await SyncService.instance.syncUnsyncedRecords();
       await loadRegistros();
     } catch (e) {
       _error = e.toString();
@@ -247,8 +213,9 @@ class RegistroProvider extends ChangeNotifier {
   }
 
   Future<void> syncRecords() async {
-    // En modo online-first, sync es simplemente recargar
+    await SyncService.instance.syncAllRecords();
     await loadRegistros();
+    await loadFincas();
   }
 
   void _calculateKilosByFinca() {
