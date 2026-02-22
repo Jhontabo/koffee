@@ -411,9 +411,20 @@ class _EditRegistroSheetState extends State<_EditRegistroSheet> {
   late DateTime _selectedDate;
   final _formKey = GlobalKey<FormState>();
 
+  // Tipo de registro
+  late bool isRojo;
+  late bool isSeco;
+  late bool isMixto;
+
   @override
   void initState() {
     super.initState();
+
+    // Determinar tipo de registro
+    isRojo = widget.registro.kilosRojo > 0 && widget.registro.kilosSeco == 0;
+    isSeco = widget.registro.kilosSeco > 0 && widget.registro.kilosRojo == 0;
+    isMixto = widget.registro.kilosRojo > 0 && widget.registro.kilosSeco > 0;
+
     _fincaController = TextEditingController(text: widget.registro.finca);
     _kilosRojoController = TextEditingController(
       text: widget.registro.kilosRojo > 0
@@ -444,8 +455,6 @@ class _EditRegistroSheetState extends State<_EditRegistroSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final isRojo = widget.registro.kilosRojo > 0;
-
     return Padding(
       padding: EdgeInsets.only(
         bottom: MediaQuery.of(context).viewInsets.bottom,
@@ -465,7 +474,11 @@ class _EditRegistroSheetState extends State<_EditRegistroSheet> {
                   const Icon(Icons.edit, color: Colors.blue),
                   const SizedBox(width: 8),
                   Text(
-                    isRojo ? 'Editar Café Rojo' : 'Editar Café Seco',
+                    isRojo
+                        ? 'Editar Café Rojo'
+                        : isMixto
+                        ? 'Editar Registro Mixto'
+                        : 'Editar Café Seco',
                     style: const TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
@@ -503,13 +516,14 @@ class _EditRegistroSheetState extends State<_EditRegistroSheet> {
                 ),
               ),
               const SizedBox(height: 12),
-              if (isRojo)
+              // Mostrar campo de kilos rojos si es rojo o mixto
+              if (isRojo || isMixto)
                 TextFormField(
                   controller: _kilosRojoController,
                   decoration: const InputDecoration(
-                    labelText: 'Kilos',
+                    labelText: 'Kilos Rojos',
                     border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.scale),
+                    prefixIcon: Icon(Icons.circle, color: Colors.red),
                   ),
                   keyboardType: TextInputType.number,
                   validator: (value) {
@@ -521,14 +535,16 @@ class _EditRegistroSheetState extends State<_EditRegistroSheet> {
                     }
                     return null;
                   },
-                )
-              else ...[
+                ),
+              // Mostrar campo de kilos secos si es seco o mixto
+              if (isSeco || isMixto) ...[
+                const SizedBox(height: 12),
                 TextFormField(
                   controller: _kilosSecoController,
                   decoration: const InputDecoration(
                     labelText: 'Kilos Secos',
                     border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.scale),
+                    prefixIcon: Icon(Icons.wb_sunny),
                   ),
                   keyboardType: TextInputType.number,
                   validator: (value) {
@@ -610,11 +626,17 @@ class _EditRegistroSheetState extends State<_EditRegistroSheet> {
       double valorUnitario = 0;
       double total = 0;
 
+      // Calcular kilos según el tipo
       if (isRojo) {
-        kilosRojo = double.parse(_kilosRojoController.text);
-      } else {
-        kilosSeco = double.parse(_kilosSecoController.text);
-        valorUnitario = double.parse(_valorUnitarioController.text);
+        kilosRojo = double.tryParse(_kilosRojoController.text) ?? 0;
+      } else if (isSeco) {
+        kilosSeco = double.tryParse(_kilosSecoController.text) ?? 0;
+        valorUnitario = double.tryParse(_valorUnitarioController.text) ?? 0;
+        total = kilosSeco * valorUnitario;
+      } else if (isMixto) {
+        kilosRojo = double.tryParse(_kilosRojoController.text) ?? 0;
+        kilosSeco = double.tryParse(_kilosSecoController.text) ?? 0;
+        valorUnitario = double.tryParse(_valorUnitarioController.text) ?? 0;
         total = kilosSeco * valorUnitario;
       }
 
