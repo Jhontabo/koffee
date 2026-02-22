@@ -262,7 +262,7 @@ class _RegistroFormState extends State<RegistroForm>
               },
             ),
             const SizedBox(height: 16),
-            _buildFincaFieldRojoWithButton(),
+            _buildFincaFieldRojo(),
             const SizedBox(height: 16),
             TextFormField(
               controller: _kilosRojoController,
@@ -336,7 +336,7 @@ class _RegistroFormState extends State<RegistroForm>
               },
             ),
             const SizedBox(height: 16),
-            _buildFincaFieldSecoWithButton(),
+            _buildFincaField(),
             const SizedBox(height: 16),
             TextFormField(
               controller: _kilosSecoController,
@@ -445,20 +445,6 @@ class _RegistroFormState extends State<RegistroForm>
     );
   }
 
-  Widget _buildFincaFieldRojoWithButton() {
-    return Row(
-      children: [
-        Expanded(child: _buildFincaFieldRojo()),
-        const SizedBox(width: 8),
-        IconButton(
-          icon: const Icon(Icons.add_circle, color: Colors.green),
-          onPressed: () => _showAddFincaDialog(isRojo: true),
-          tooltip: 'Agregar nueva finca',
-        ),
-      ],
-    );
-  }
-
   Widget _buildFincaField() {
     final controllerValue = _fincaSecoController.text;
     final selectedSeco =
@@ -497,71 +483,6 @@ class _RegistroFormState extends State<RegistroForm>
         }
         return null;
       },
-    );
-  }
-
-  Widget _buildFincaFieldSecoWithButton() {
-    return Row(
-      children: [
-        Expanded(child: _buildFincaField()),
-        const SizedBox(width: 8),
-        IconButton(
-          icon: const Icon(Icons.add_circle, color: Colors.green),
-          onPressed: () => _showAddFincaDialog(),
-          tooltip: 'Agregar nueva finca',
-        ),
-      ],
-    );
-  }
-
-  void _showAddFincaDialog({bool isRojo = false}) {
-    final controller = TextEditingController();
-    final userId = context.read<RegistroProvider>().userId ?? '';
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Agregar Finca'),
-        content: TextField(
-          controller: controller,
-          decoration: const InputDecoration(
-            labelText: 'Nombre de la finca',
-            border: OutlineInputBorder(),
-            hintText: 'Escriba en mayúsculas',
-          ),
-          autofocus: true,
-          textCapitalization: TextCapitalization.characters,
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancelar'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              if (controller.text.trim().isNotEmpty) {
-                final nombreFinca = controller.text.trim().toUpperCase();
-                final userId = context.read<RegistroProvider>().userId ?? '';
-                final nuevaFinca = Finca(userId: userId, nombre: nombreFinca);
-                context.read<RegistroProvider>().addFinca(nuevaFinca);
-                setState(() {
-                  _fincasList = context
-                      .read<RegistroProvider>()
-                      .fincas
-                      .toSet()
-                      .toList();
-                  if (isRojo) {
-                    _fincaRojoController.text = nombreFinca;
-                  } else {
-                    _fincaSecoController.text = nombreFinca;
-                  }
-                });
-                Navigator.pop(context);
-              }
-            },
-            child: const Text('Agregar'),
-          ),
-        ],
-      ),
     );
   }
 }
