@@ -21,6 +21,12 @@ class RegistroProvider extends ChangeNotifier {
 
   final CollectionReference _registrosCollection = FirebaseFirestore.instance
       .collection('registros');
+  final CollectionReference _registrosRojoCollection = FirebaseFirestore
+      .instance
+      .collection('registros_rojo');
+  final CollectionReference _registrosSecoCollection = FirebaseFirestore
+      .instance
+      .collection('registros_seco');
   final CollectionReference _fincasCollection = FirebaseFirestore.instance
       .collection('fincas');
 
@@ -290,10 +296,13 @@ class RegistroProvider extends ChangeNotifier {
     }
   }
 
-  Future<void> deleteRegistro(String firebaseId) async {
+  Future<void> deleteRegistro(String firebaseId, String tipo) async {
     try {
-      // Eliminar de Firebase
-      await _registrosCollection.doc(firebaseId).delete();
+      // Eliminar de la colección correcta según el tipo
+      final collection = tipo == 'rojo'
+          ? _registrosRojoCollection
+          : _registrosSecoCollection;
+      await collection.doc(firebaseId).delete();
 
       // Eliminar de SQLite usando firebaseId
       await DatabaseHelper.instance.deleteRegistro(

@@ -379,8 +379,10 @@ class _RegistroCard extends StatelessWidget {
           TextButton(
             onPressed: () {
               if (registro.firebaseId != null) {
+                final tipo = registro.isRojo ? 'rojo' : 'seco';
                 context.read<RegistroProvider>().deleteRegistro(
                   registro.firebaseId!,
+                  tipo,
                 );
               }
               Navigator.pop(ctx);
@@ -442,18 +444,6 @@ class _EditRegistroSheetState extends State<_EditRegistroSheet> {
               widget.registro.valorUnitario! > 0)
           ? widget.registro.valorUnitario.toString()
           : '0',
-    );
-    _kilosSecoController = TextEditingController(
-      text: widget.registro.kilosSeco > 0
-          ? widget.registro.kilosSeco.toString()
-          : '',
-    );
-    _valorUnitarioController = TextEditingController(
-      text:
-          (widget.registro.valorUnitario != null &&
-              widget.registro.valorUnitario! > 0)
-          ? widget.registro.valorUnitario.toString()
-          : '',
     );
     _selectedDate = widget.registro.fecha;
   }
