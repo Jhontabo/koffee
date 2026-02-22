@@ -379,10 +379,8 @@ class _RegistroCard extends StatelessWidget {
           TextButton(
             onPressed: () {
               if (registro.firebaseId != null) {
-                final tipo = registro.isRojo ? 'rojo' : 'seco';
                 context.read<RegistroProvider>().deleteRegistro(
                   registro.firebaseId!,
-                  tipo,
                 );
               }
               Navigator.pop(ctx);
