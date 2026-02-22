@@ -255,7 +255,7 @@ class _RegistroCard extends StatelessWidget {
           children: [
             Icon(Icons.info_outline, color: Colors.red),
             SizedBox(width: 8),
-            Text('Detalles del Registro'),
+            Text('Detalles'),
           ],
         ),
         content: SingleChildScrollView(
