@@ -127,10 +127,12 @@ class SyncService {
 
         final fibra = Finca(
           userId: data['userId'] as String? ?? '',
-          nombre: data['nombre'] as String,
+          nombre: data['nombre'] as String? ?? '',
           ubicacion: data['ubicacion'] as String?,
           tamanoHectareas: (data['tamanoHectareas'] as num?)?.toDouble(),
-          fechaCreacion: DateTime.parse(data['fechaCreacion'] as String),
+          fechaCreacion: data['fechaCreacion'] != null
+              ? DateTime.parse(data['fechaCreacion'] as String)
+              : DateTime.now(),
           firebaseId: doc.id,
         );
 
