@@ -205,6 +205,12 @@ class _RegistroFormState extends State<RegistroForm>
             }
           });
         }
+
+        // Mostrar mensaje si no hay fincas registradas
+        if (uniqueFincas.isEmpty) {
+          return _buildNoFincasMessage(context);
+        }
+
         return Column(
           children: [
             TabBar(
@@ -225,6 +231,56 @@ class _RegistroFormState extends State<RegistroForm>
           ],
         );
       },
+    );
+  }
+
+  Widget _buildNoFincasMessage(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.landscape, size: 80, color: Colors.grey[400]),
+            const SizedBox(height: 16),
+            const Text(
+              'No hay fincas registradas',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Para registrar cosechas, primero debes agregar una finca',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+            ),
+            const SizedBox(height: 24),
+            ElevatedButton.icon(
+              onPressed: () {
+                // Navegar a la pestaña de fincas (índice 2)
+                try {
+                  final homeState = context.findAncestorStateOfType<State>();
+                  if (homeState != null && homeState.mounted) {
+                    final homeScreenState = homeState as dynamic;
+                    if (homeScreenState.navigateToTab != null) {
+                      homeScreenState.navigateToTab(2);
+                    }
+                  }
+                } catch (e) {
+                  // Ignorar errores de navegación
+                }
+              },
+              icon: const Icon(Icons.add),
+              label: const Text('Agregar Finca'),
+              style: ElevatedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 12,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 

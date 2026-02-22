@@ -4,7 +4,6 @@ import 'package:provider/provider.dart';
 import '../providers/registro_provider.dart';
 import '../services/pdf_service.dart';
 import '../services/auth_service.dart';
-import '../models/registro_finca.dart';
 import '../widgets/registro_form.dart';
 import '../widgets/registro_list_view.dart';
 import '../widgets/kilos_bar_chart.dart';
@@ -28,6 +27,14 @@ class _HomeScreenState extends State<HomeScreen> {
     'Gráfica',
     'Perfil',
   ];
+
+  void navigateToTab(int index) {
+    if (index >= 0 && index < _titles.length) {
+      setState(() {
+        _selectedIndex = index;
+      });
+    }
+  }
 
   void _onItemTapped(int index) {
     if (index != _selectedIndex) {
