@@ -78,11 +78,43 @@ class RegistroProvider extends ChangeNotifier {
     if (_userId == null) return;
 
     try {
-      _fincas = await DatabaseHelper.instance.getAllFincas(_userId!);
+      // Cargar de Firebase directamente
+      final snapshot = await _fincasCollection
+          .where('userId', isEqualTo: _userId)
+          .get();
+
+      _fincas = snapshot.docs.map((doc) {
+        final data = doc.data() as Map<String, dynamic>;
+        return Finca(
+          id: null,
+          userId: data['userId'] as String? ?? '',
+          nombre: data['nombre'] as String? ?? '',
+          ubicacion: data['ubicacion'] as String?,
+          tamanoHectareas: (data['tamanoHectareas'] as num?)?.toDouble(),
+          fechaCreacion: data['fechaCreacion'] != null
+              ? DateTime.parse(data['fechaCreacion'] as String)
+              : DateTime.now(),
+          isSynced: true,
+          firebaseId: doc.id,
+        );
+      }).toList();
+
+      // Guardar en SQLite como backup
+      for (final fibra in _fincas) {
+        await DatabaseHelper.instance.upsertFinca(fibra);
+      }
+
       _fincasNames = _fincas.map((f) => f.nombre).toList();
       notifyListeners();
     } catch (e) {
-      print('Error cargando fincas: $e');
+      // Si falla Firebase, cargar de SQLite
+      try {
+        _fincas = await DatabaseHelper.instance.getAllFincas(_userId!);
+        _fincasNames = _fincas.map((f) => f.nombre).toList();
+      } catch (e2) {
+        print('Error cargando fincas: $e');
+      }
+      notifyListeners();
     }
   }
 
@@ -90,22 +122,27 @@ class RegistroProvider extends ChangeNotifier {
     if (_userId == null) return;
 
     try {
-      final existing = await DatabaseHelper.instance.getFincaByName(
-        _userId!,
-        nuevaFinca.nombre.toUpperCase(),
-      );
+      // Verificar si ya existe en Firebase
+      final snapshot = await _fincasCollection
+          .where('userId', isEqualTo: _userId)
+          .where('nombre', isEqualTo: nuevaFinca.nombre.toUpperCase())
+          .get();
 
-      if (existing != null) {
+      if (snapshot.docs.isNotEmpty) {
         return;
       }
 
+      // Guardar primero en Firebase
       final fibra = nuevaFinca.copyWith(
         userId: _userId,
         nombre: nuevaFinca.nombre.toUpperCase(),
       );
+      final docRef = await _fincasCollection.add(fibra.toFirestore());
 
-      await DatabaseHelper.instance.insertFinca(fibra);
-      await SyncService.instance.syncUnsyncedFincas();
+      // Guardar en SQLite
+      final fibraConId = fibra.copyWith(firebaseId: docRef.id, isSynced: true);
+      await DatabaseHelper.instance.insertFinca(fibraConId);
+
       await loadFincas();
     } catch (e) {
       print('Error guardando finca: $e');
@@ -116,8 +153,16 @@ class RegistroProvider extends ChangeNotifier {
     if (_userId == null) return;
 
     try {
+      // Actualizar en Firebase
+      if (fibra.firebaseId != null) {
+        await _fincasCollection
+            .doc(fibra.firebaseId)
+            .update(fibra.toFirestore());
+      }
+
+      // Actualizar en SQLite
       await DatabaseHelper.instance.updateFinca(fibra);
-      await SyncService.instance.syncUnsyncedFincas();
+
       await loadFincas();
     } catch (e) {
       print('Error actualizando finca: $e');
@@ -125,10 +170,19 @@ class RegistroProvider extends ChangeNotifier {
   }
 
   Future<void> removeFinca(Finca fibra) async {
-    if (_userId == null || fibra.id == null) return;
+    if (_userId == null) return;
 
     try {
-      await DatabaseHelper.instance.deleteFinca(fibra.id!);
+      // Eliminar de Firebase
+      if (fibra.firebaseId != null) {
+        await _fincasCollection.doc(fibra.firebaseId).delete();
+      }
+
+      // Eliminar de SQLite
+      if (fibra.id != null) {
+        await DatabaseHelper.instance.deleteFinca(fibra.id!);
+      }
+
       await loadFincas();
     } catch (e) {
       print('Error eliminando finca: $e');
@@ -158,12 +212,48 @@ class RegistroProvider extends ChangeNotifier {
     }
 
     try {
-      _registros = await DatabaseHelper.instance.getAllRegistros(_userId!);
+      // Cargar de Firebase directamente (online-first)
+      final snapshot = await _registrosCollection
+          .where('userId', isEqualTo: _userId)
+          .get();
+
+      _registros = snapshot.docs.map((doc) {
+        final data = doc.data() as Map<String, dynamic>;
+        return RegistroFinca(
+          id: null,
+          userId: data['userId'] as String? ?? '',
+          firebaseId: doc.id,
+          fecha: data['fecha'] != null
+              ? DateTime.parse(data['fecha'] as String)
+              : DateTime.now(),
+          finca: data['finca'] as String? ?? '',
+          kilosRojo: (data['kilosRojo'] as num?)?.toDouble() ?? 0.0,
+          kilosSeco: (data['kilosSeco'] as num?)?.toDouble() ?? 0.0,
+          valorUnitario: (data['valorUnitario'] as num?)?.toDouble() ?? 0.0,
+          total: (data['total'] as num?)?.toDouble() ?? 0.0,
+          isSynced: true,
+        );
+      }).toList();
+
+      // Guardar en SQLite como backup
+      for (final registro in _registros) {
+        if (registro.firebaseId != null) {
+          await DatabaseHelper.instance.upsertRegistro(registro);
+        }
+      }
+
       _registros.sort((a, b) => b.fecha.compareTo(a.fecha));
       _calculateKilosByFinca();
     } catch (e) {
-      _error = e.toString();
-      print('Error cargando registros: $e');
+      // Si falla Firebase, intentar cargar de SQLite como backup
+      _error = 'Sin conexión: mostrando datos locales';
+      try {
+        _registros = await DatabaseHelper.instance.getAllRegistros(_userId!);
+        _registros.sort((a, b) => b.fecha.compareTo(a.fecha));
+        _calculateKilosByFinca();
+      } catch (e2) {
+        _error = 'Error cargando datos: $e';
+      }
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -173,15 +263,25 @@ class RegistroProvider extends ChangeNotifier {
   Future<void> addRegistro(RegistroFinca registro) async {
     if (_userId == null) {
       _error = 'Usuario no autenticado';
-      print('Error: Usuario no autenticado');
       notifyListeners();
       return;
     }
 
     try {
+      // Guardar primero en Firebase
       final registroConUserId = registro.copyWith(userId: _userId);
-      await DatabaseHelper.instance.insertRegistro(registroConUserId);
-      await SyncService.instance.syncUnsyncedRecords();
+      final docRef = await _registrosCollection.add(
+        registroConUserId.toFirestore(),
+      );
+
+      // Guardar en SQLite como backup
+      final registroConId = registroConUserId.copyWith(
+        firebaseId: docRef.id,
+        isSynced: true,
+      );
+      await DatabaseHelper.instance.insertRegistro(registroConId);
+
+      // Recargar
       await loadRegistros();
     } catch (e) {
       _error = e.toString();
@@ -192,7 +292,20 @@ class RegistroProvider extends ChangeNotifier {
 
   Future<void> deleteRegistro(int id) async {
     try {
+      // Buscar el registro para obtener firebaseId
+      final registroAEliminar = _registros.firstWhere(
+        (r) => r.id == id,
+        orElse: () => throw Exception('Registro no encontrado'),
+      );
+
+      // Eliminar de Firebase
+      if (registroAEliminar.firebaseId != null) {
+        await _registrosCollection.doc(registroAEliminar.firebaseId).delete();
+      }
+
+      // Eliminar de SQLite
       await DatabaseHelper.instance.deleteRegistro(id);
+
       await loadRegistros();
     } catch (e) {
       _error = e.toString();
@@ -202,9 +315,16 @@ class RegistroProvider extends ChangeNotifier {
 
   Future<void> updateRegistro(RegistroFinca registro) async {
     try {
-      if (registro.id == null) return;
+      // Actualizar en Firebase
+      if (registro.firebaseId != null) {
+        await _registrosCollection
+            .doc(registro.firebaseId)
+            .update(registro.toFirestore());
+      }
+
+      // Actualizar en SQLite
       await DatabaseHelper.instance.updateRegistro(registro);
-      await SyncService.instance.syncUnsyncedRecords();
+
       await loadRegistros();
     } catch (e) {
       _error = e.toString();
@@ -213,7 +333,6 @@ class RegistroProvider extends ChangeNotifier {
   }
 
   Future<void> syncRecords() async {
-    await SyncService.instance.syncAllRecords();
     await loadRegistros();
     await loadFincas();
   }
