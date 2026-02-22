@@ -42,12 +42,14 @@ class RegistroFinca {
     return RegistroFinca(
       id: map['id'] as int?,
       userId: map['userId'] as String? ?? '',
-      fecha: DateTime.parse(map['fecha'] as String),
-      finca: map['finca'] as String,
+      fecha: map['fecha'] != null
+          ? DateTime.parse(map['fecha'] as String)
+          : DateTime.now(),
+      finca: map['finca'] as String? ?? '',
       kilosRojo: (map['kilosRojo'] as num?)?.toDouble() ?? 0,
-      kilosSeco: (map['kilosSeco'] as num).toDouble(),
-      valorUnitario: (map['valorUnitario'] as num).toDouble(),
-      total: (map['total'] as num).toDouble(),
+      kilosSeco: (map['kilosSeco'] as num?)?.toDouble() ?? 0,
+      valorUnitario: (map['valorUnitario'] as num?)?.toDouble() ?? 0,
+      total: (map['total'] as num?)?.toDouble() ?? 0,
       isSynced: map['isSynced'] == 1,
       firebaseId: map['firebaseId'] as String?,
     );
