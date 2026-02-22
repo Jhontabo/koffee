@@ -12,7 +12,7 @@ class RegistroListView extends StatefulWidget {
 }
 
 class _RegistroListViewState extends State<RegistroListView> {
-  String _groupBy = 'day'; // 'day', 'month'
+  String _groupBy = 'day';
 
   @override
   Widget build(BuildContext context) {
@@ -35,12 +35,10 @@ class _RegistroListViewState extends State<RegistroListView> {
           );
         }
 
-        // Group records
         final grouped = _groupRegistros(provider.registros);
 
         return Column(
           children: [
-            // Filter Tabs
             Padding(
               padding: const EdgeInsets.all(8.0),
               child: SegmentedButton<String>(
@@ -64,7 +62,6 @@ class _RegistroListViewState extends State<RegistroListView> {
                 },
               ),
             ),
-            // List
             Expanded(
               child: ListView.builder(
                 padding: const EdgeInsets.only(bottom: 80),
@@ -110,7 +107,6 @@ class _RegistroListViewState extends State<RegistroListView> {
   }
 
   Widget _buildHeader(String title) {
-    // Capitalize first letter
     final capitalized = title[0].toUpperCase() + title.substring(1);
 
     return Padding(
@@ -236,21 +232,11 @@ class _RegistroCard extends StatelessWidget {
                   ],
                 ),
               ),
-              Column(
-                children: [
-                  IconButton(
-                    icon: const Icon(Icons.edit_outlined, size: 20),
-                    onPressed: () => _showEditDialog(context),
-                    tooltip: 'Editar',
-                    color: Colors.blue,
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.delete_outline, size: 20),
-                    onPressed: () => _showDeleteConfirmation(context),
-                    tooltip: 'Eliminar',
-                    color: Colors.red,
-                  ),
-                ],
+              IconButton(
+                icon: const Icon(Icons.delete_outline, size: 20),
+                onPressed: () => _showDeleteConfirmation(context),
+                tooltip: 'Eliminar',
+                color: Colors.red,
               ),
             ],
           ),
@@ -307,42 +293,92 @@ class _RegistroCard extends StatelessWidget {
     );
   }
 
-  void _showEditDialog(BuildContext ctx) {
-    Navigator.pop(ctx);
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (ctx.mounted) {
-        showModalBottomSheet(
-          context: ctx,
-          isScrollControlled: true,
-          shape: const RoundedRectangleBorder(
-            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-          ),
-          builder: (sheetContext) => _EditRegistroSheet(registro: registro),
-        );
-      }
-    });
-  }
-
   void _showDeleteConfirmation(BuildContext context) {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Row(
           children: [
-            Icon(Icons.warning_amber, color: Colors.red),
+            Icon(Icons.warning_amber_rounded, color: Colors.red, size: 28),
             SizedBox(width: 8),
-            Text('Confirmar Eliminación'),
+            Text('Eliminar Registro'),
           ],
         ),
-        content: Text(
-          '¿Está seguro de eliminar el registro de "${registro.finca}" del ${DateFormat('dd/MM/yyyy', 'es').format(registro.fecha)}?',
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              '¿Está seguro de eliminar este registro?',
+              style: TextStyle(fontSize: 15, color: Colors.grey[700]),
+            ),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.red.shade50,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.red.shade200),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.home, size: 16, color: Colors.red.shade700),
+                      const SizedBox(width: 4),
+                      Text(
+                        registro.finca.toUpperCase(),
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: Colors.red.shade700,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      Icon(Icons.scale, size: 16, color: Colors.red.shade700),
+                      const SizedBox(width: 4),
+                      Text(
+                        '${registro.kilosRojo} kg',
+                        style: TextStyle(color: Colors.red.shade700),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Icon(
+                  Icons.info_outline,
+                  size: 16,
+                  color: Colors.orange.shade700,
+                ),
+                const SizedBox(width: 4),
+                Expanded(
+                  child: Text(
+                    'Esta acción no se puede deshacer',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.orange.shade700,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
             child: const Text('Cancelar'),
           ),
-          TextButton(
+          ElevatedButton(
             onPressed: () {
               if (registro.firebaseId != null) {
                 context.read<RegistroProvider>().deleteRegistro(
@@ -351,182 +387,14 @@ class _RegistroCard extends StatelessWidget {
               }
               Navigator.pop(ctx);
             },
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
             child: const Text('Eliminar'),
           ),
         ],
       ),
     );
-  }
-}
-
-class _EditRegistroSheet extends StatefulWidget {
-  final RegistroFinca registro;
-
-  const _EditRegistroSheet({required this.registro});
-
-  @override
-  State<_EditRegistroSheet> createState() => _EditRegistroSheetState();
-}
-
-class _EditRegistroSheetState extends State<_EditRegistroSheet> {
-  late TextEditingController _fincaController;
-  late TextEditingController _kilosController;
-  late DateTime _selectedDate;
-  final _formKey = GlobalKey<FormState>();
-
-  @override
-  void initState() {
-    super.initState();
-    _fincaController = TextEditingController(text: widget.registro.finca);
-    _kilosController = TextEditingController(
-      text: widget.registro.kilosRojo > 0
-          ? widget.registro.kilosRojo.toString()
-          : '0',
-    );
-    _selectedDate = widget.registro.fecha;
-  }
-
-  @override
-  void dispose() {
-    _fincaController.dispose();
-    _kilosController.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: EdgeInsets.only(
-        bottom: MediaQuery.of(context).viewInsets.bottom,
-        left: 16,
-        right: 16,
-        top: 16,
-      ),
-      child: Form(
-        key: _formKey,
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const Row(
-                children: [
-                  Icon(Icons.edit, color: Colors.red),
-                  SizedBox(width: 8),
-                  Text(
-                    'Editar Café Rojo',
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _fincaController,
-                decoration: const InputDecoration(
-                  labelText: 'Finca',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.home),
-                ),
-                validator: (value) {
-                  if (value == null || value.trim().isEmpty) {
-                    return 'Ingrese la finca';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 12),
-              InkWell(
-                onTap: () => _selectDate(context),
-                child: InputDecorator(
-                  decoration: const InputDecoration(
-                    labelText: 'Fecha',
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.calendar_today),
-                  ),
-                  child: Text(
-                    DateFormat('yyyy-MM-dd', 'es').format(_selectedDate),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 12),
-              TextFormField(
-                controller: _kilosController,
-                decoration: const InputDecoration(
-                  labelText: 'Kilos',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.scale, color: Colors.red),
-                ),
-                keyboardType: TextInputType.number,
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Ingrese los kilos';
-                  }
-                  if (double.tryParse(value) == null) {
-                    return 'Ingrese un número válido';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 20),
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: () => Navigator.pop(context),
-                      child: const Text('Cancelar'),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: FilledButton(
-                      onPressed: _saveChanges,
-                      style: FilledButton.styleFrom(
-                        backgroundColor: Colors.red,
-                      ),
-                      child: const Text('Guardar'),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Future<void> _selectDate(BuildContext context) async {
-    final picked = await showDatePicker(
-      context: context,
-      initialDate: _selectedDate,
-      firstDate: DateTime(2020),
-      lastDate: DateTime.now(),
-    );
-    if (picked != null) {
-      setState(() {
-        _selectedDate = picked;
-      });
-    }
-  }
-
-  void _saveChanges() {
-    if (_formKey.currentState!.validate()) {
-      final kilos = double.tryParse(_kilosController.text) ?? 0;
-
-      final updatedRegistro = widget.registro.copyWith(
-        fecha: _selectedDate,
-        finca: _fincaController.text.trim(),
-        kilosRojo: kilos,
-        isSynced: false,
-      );
-
-      Provider.of<RegistroProvider>(
-        context,
-        listen: false,
-      ).updateRegistro(updatedRegistro);
-      Navigator.pop(context);
-    }
   }
 }
