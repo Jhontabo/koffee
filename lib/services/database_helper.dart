@@ -112,12 +112,34 @@ class DatabaseHelper {
 
   Future<int> updateRegistro(RegistroFinca registro) async {
     final db = await database;
-    return await db.update(
-      'registros',
-      registro.toMap(),
-      where: 'id = ?',
-      whereArgs: [registro.id],
-    );
+
+    if (registro.id != null) {
+      return await db.update(
+        'registros',
+        registro.toMap(),
+        where: 'id = ?',
+        whereArgs: [registro.id],
+      );
+    } else if (registro.firebaseId != null) {
+      // Buscar por firebaseId si no hay id local
+      final existing = await db.query(
+        'registros',
+        where: 'firebaseId = ?',
+        whereArgs: [registro.firebaseId],
+      );
+      if (existing.isNotEmpty) {
+        final localId = existing.first['id'] as int;
+        final map = registro.toMap();
+        map['isSynced'] = 1;
+        return await db.update(
+          'registros',
+          map,
+          where: 'id = ?',
+          whereArgs: [localId],
+        );
+      }
+    }
+    return 0;
   }
 
   Future<int> markAsSynced(int id, String firebaseId) async {
@@ -130,9 +152,19 @@ class DatabaseHelper {
     );
   }
 
-  Future<int> deleteRegistro(int id) async {
+  Future<int> deleteRegistro(int? id, {String? firebaseId}) async {
     final db = await database;
-    return await db.delete('registros', where: 'id = ?', whereArgs: [id]);
+
+    if (id != null) {
+      return await db.delete('registros', where: 'id = ?', whereArgs: [id]);
+    } else if (firebaseId != null) {
+      return await db.delete(
+        'registros',
+        where: 'firebaseId = ?',
+        whereArgs: [firebaseId],
+      );
+    }
+    return 0;
   }
 
   Future<Map<String, double>> getKilosByFinca(String userId) async {

@@ -378,8 +378,10 @@ class _RegistroCard extends StatelessWidget {
           ),
           TextButton(
             onPressed: () {
-              if (registro.id != null) {
-                context.read<RegistroProvider>().deleteRegistro(registro.id!);
+              if (registro.firebaseId != null) {
+                context.read<RegistroProvider>().deleteRegistro(
+                  registro.firebaseId!,
+                );
               }
               Navigator.pop(ctx);
             },

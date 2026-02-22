@@ -290,21 +290,16 @@ class RegistroProvider extends ChangeNotifier {
     }
   }
 
-  Future<void> deleteRegistro(int id) async {
+  Future<void> deleteRegistro(String firebaseId) async {
     try {
-      // Buscar el registro para obtener firebaseId
-      final registroAEliminar = _registros.firstWhere(
-        (r) => r.id == id,
-        orElse: () => throw Exception('Registro no encontrado'),
-      );
-
       // Eliminar de Firebase
-      if (registroAEliminar.firebaseId != null) {
-        await _registrosCollection.doc(registroAEliminar.firebaseId).delete();
-      }
+      await _registrosCollection.doc(firebaseId).delete();
 
-      // Eliminar de SQLite
-      await DatabaseHelper.instance.deleteRegistro(id);
+      // Eliminar de SQLite usando firebaseId
+      await DatabaseHelper.instance.deleteRegistro(
+        null,
+        firebaseId: firebaseId,
+      );
 
       await loadRegistros();
     } catch (e) {
