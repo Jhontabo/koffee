@@ -23,6 +23,17 @@ class RegistroFinca {
     this.firebaseId,
   });
 
+  // Getters para determinar tipo de registro
+  bool get isRojo => kilosRojo > 0 && kilosSeco == 0;
+  bool get isSeco => kilosSeco > 0 && kilosRojo == 0;
+  bool get isMixto => kilosRojo > 0 && kilosSeco > 0;
+
+  // Getter para kilos según tipo
+  double get kilos => isRojo ? kilosRojo : kilosSeco;
+
+  // Getter para el tipo como string
+  String get tipo => isRojo ? 'rojo' : (isMixto ? 'mixto' : 'seco');
+
   Map<String, dynamic> toMap() {
     return {
       'id': id,

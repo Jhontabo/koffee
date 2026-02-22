@@ -420,16 +420,28 @@ class _EditRegistroSheetState extends State<_EditRegistroSheet> {
   void initState() {
     super.initState();
 
-    // Determinar tipo de registro
-    isRojo = widget.registro.kilosRojo > 0 && widget.registro.kilosSeco == 0;
-    isSeco = widget.registro.kilosSeco > 0 && widget.registro.kilosRojo == 0;
-    isMixto = widget.registro.kilosRojo > 0 && widget.registro.kilosSeco > 0;
+    // Usar getters del modelo
+    isRojo = widget.registro.isRojo;
+    isSeco = widget.registro.isSeco;
+    isMixto = widget.registro.isMixto;
 
     _fincaController = TextEditingController(text: widget.registro.finca);
     _kilosRojoController = TextEditingController(
       text: widget.registro.kilosRojo > 0
           ? widget.registro.kilosRojo.toString()
-          : '',
+          : '0',
+    );
+    _kilosSecoController = TextEditingController(
+      text: widget.registro.kilosSeco > 0
+          ? widget.registro.kilosSeco.toString()
+          : '0',
+    );
+    _valorUnitarioController = TextEditingController(
+      text:
+          (widget.registro.valorUnitario != null &&
+              widget.registro.valorUnitario! > 0)
+          ? widget.registro.valorUnitario.toString()
+          : '0',
     );
     _kilosSecoController = TextEditingController(
       text: widget.registro.kilosSeco > 0
@@ -437,7 +449,9 @@ class _EditRegistroSheetState extends State<_EditRegistroSheet> {
           : '',
     );
     _valorUnitarioController = TextEditingController(
-      text: widget.registro.valorUnitario > 0
+      text:
+          (widget.registro.valorUnitario != null &&
+              widget.registro.valorUnitario! > 0)
           ? widget.registro.valorUnitario.toString()
           : '',
     );
