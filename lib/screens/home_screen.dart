@@ -4,11 +4,12 @@ import 'package:provider/provider.dart';
 import '../providers/registro_provider.dart';
 import '../services/pdf_service.dart';
 import '../services/auth_service.dart';
-import '../widgets/registro_form.dart';
 import '../widgets/registro_list_view.dart';
 import '../widgets/kilos_bar_chart.dart';
+import '../widgets/home_dashboard.dart';
 import 'fincas_screen.dart';
 import 'perfil_screen.dart';
+import 'jornaleros_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -99,7 +100,7 @@ class _HomeScreenState extends State<HomeScreen> {
       body: IndexedStack(
         index: _selectedIndex,
         children: const [
-          RegistroForm(),
+          HomeDashboard(),
           RegistroListView(),
           FincasScreen(),
           KilosBarChart(),

@@ -4,6 +4,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'firebase_options.dart';
 import 'providers/registro_provider.dart';
+import 'providers/jornaleros_provider.dart';
 import 'screens/home_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/register_screen.dart';
@@ -23,8 +24,11 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (_) => RegistroProvider(),
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => RegistroProvider()),
+        ChangeNotifierProvider(create: (_) => JornalerosProvider()),
+      ],
       child: MaterialApp(
         title: 'Koffee',
         debugShowCheckedModeBanner: false,

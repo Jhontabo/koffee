@@ -4,6 +4,7 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import 'package:intl/intl.dart';
 import '../models/registro_finca.dart';
+import '../models/registro_recolector.dart';
 
 class PdfService {
   static Future<void> generateReport({
@@ -177,6 +178,193 @@ class PdfService {
           ],
         ),
       ],
+    );
+  }
+
+  static Future<void> generatePagoReport({
+    required String title,
+    required List<RegistroRecolector> registros,
+    required DateTime startDate,
+    required DateTime endDate,
+  }) async {
+    final pdf = pw.Document();
+
+    final fontRegular = await PdfGoogleFonts.openSansRegular();
+    final fontBold = await PdfGoogleFonts.openSansBold();
+
+    final currencyFormat = NumberFormat.currency(
+      symbol: '\$',
+      decimalDigits: 0,
+    );
+    final dateFormat = DateFormat('dd/MM/yyyy');
+
+    final Map<String, List<RegistroRecolector>> trabajadoresMap = {};
+    for (var reg in registros) {
+      if (trabajadoresMap.containsKey(reg.nombreTrabajador)) {
+        trabajadoresMap[reg.nombreTrabajador]!.add(reg);
+      } else {
+        trabajadoresMap[reg.nombreTrabajador] = [reg];
+      }
+    }
+
+    double totalGeneral = 0;
+    for (var reg in registros) {
+      totalGeneral += reg.total;
+    }
+
+    pdf.addPage(
+      pw.MultiPage(
+        pageFormat: PdfPageFormat.a4,
+        margin: const pw.EdgeInsets.all(32),
+        theme: pw.ThemeData.withFont(base: fontRegular, bold: fontBold),
+        build: (context) => [
+          _buildPagoHeader(title, startDate, endDate),
+          pw.SizedBox(height: 20),
+          _buildPagoSummary(totalGeneral, currencyFormat),
+          pw.SizedBox(height: 20),
+          pw.Text(
+            'Detalle por Trabajador',
+            style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold),
+          ),
+          pw.SizedBox(height: 10),
+          ...trabajadoresMap.entries.map((entry) {
+            final nombre = entry.key;
+            final regList = entry.value;
+            final totalTrabajador = regList.fold(
+              0.0,
+              (sum, reg) => sum + reg.total,
+            );
+            final kilosTrabajador = regList.fold(
+              0.0,
+              (sum, reg) => sum + reg.kilos,
+            );
+
+            return pw.Container(
+              margin: const pw.EdgeInsets.only(bottom: 16),
+              child: pw.Column(
+                crossAxisAlignment: pw.CrossAxisAlignment.start,
+                children: [
+                  pw.Container(
+                    padding: const pw.EdgeInsets.all(8),
+                    color: PdfColors.brown50,
+                    child: pw.Row(
+                      mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                      children: [
+                        pw.Text(
+                          nombre,
+                          style: pw.TextStyle(
+                            fontWeight: pw.FontWeight.bold,
+                            fontSize: 14,
+                          ),
+                        ),
+                        pw.Text(
+                          '${kilosTrabajador.toStringAsFixed(1)} kg - ${currencyFormat.format(totalTrabajador)}',
+                          style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+                        ),
+                      ],
+                    ),
+                  ),
+                  pw.Table.fromTextArray(
+                    headers: ['Fecha', 'Finca', 'Kilos', 'Precio/kg', 'Total'],
+                    data: regList.map((reg) {
+                      return [
+                        dateFormat.format(reg.fecha),
+                        reg.fibra,
+                        '${reg.kilos.toStringAsFixed(1)} kg',
+                        currencyFormat.format(reg.precioKilo),
+                        currencyFormat.format(reg.total),
+                      ];
+                    }).toList(),
+                    headerStyle: pw.TextStyle(
+                      fontWeight: pw.FontWeight.bold,
+                      fontSize: 10,
+                    ),
+                    cellStyle: const pw.TextStyle(fontSize: 9),
+                    cellAlignment: pw.Alignment.centerLeft,
+                    headerDecoration: const pw.BoxDecoration(
+                      color: PdfColors.brown900,
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }),
+          pw.SizedBox(height: 20),
+          _buildFooter(),
+        ],
+      ),
+    );
+
+    await Printing.sharePdf(
+      bytes: await pdf.save(),
+      filename:
+          'Pago_Jornaleros_${DateFormat('yyyyMMdd').format(DateTime.now())}.pdf',
+    );
+  }
+
+  static pw.Widget _buildPagoHeader(
+    String title,
+    DateTime start,
+    DateTime end,
+  ) {
+    return pw.Column(
+      crossAxisAlignment: pw.CrossAxisAlignment.start,
+      children: [
+        pw.Text(
+          'Koffee - Pago Jornaleros',
+          style: pw.TextStyle(
+            fontSize: 24,
+            fontWeight: pw.FontWeight.bold,
+            color: PdfColors.brown900,
+          ),
+        ),
+        pw.SizedBox(height: 8),
+        pw.Text(
+          title,
+          style: pw.TextStyle(fontSize: 18, color: PdfColors.grey700),
+        ),
+        pw.Text(
+          'Periodo: ${DateFormat('dd/MM/yyyy').format(start)} - ${DateFormat('dd/MM/yyyy').format(end)}',
+          style: const pw.TextStyle(fontSize: 12, color: PdfColors.grey600),
+        ),
+        pw.Divider(color: PdfColors.grey300),
+      ],
+    );
+  }
+
+  static pw.Widget _buildPagoSummary(double total, NumberFormat currency) {
+    return pw.Container(
+      padding: const pw.EdgeInsets.all(12),
+      decoration: pw.BoxDecoration(
+        border: pw.Border.all(color: PdfColors.grey300),
+        borderRadius: pw.BorderRadius.circular(8),
+        color: PdfColors.green50,
+      ),
+      child: pw.Row(
+        mainAxisAlignment: pw.MainAxisAlignment.center,
+        children: [
+          pw.Column(
+            children: [
+              pw.Text(
+                'TOTAL A PAGAR',
+                style: const pw.TextStyle(
+                  fontSize: 12,
+                  color: PdfColors.grey700,
+                ),
+              ),
+              pw.SizedBox(height: 4),
+              pw.Text(
+                currency.format(total),
+                style: pw.TextStyle(
+                  fontSize: 24,
+                  fontWeight: pw.FontWeight.bold,
+                  color: PdfColors.green800,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 }
