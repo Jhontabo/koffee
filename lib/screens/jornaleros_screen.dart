@@ -23,6 +23,11 @@ class _JornalerosScreenState extends State<JornalerosScreen>
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final provider = context.read<JornalerosProvider>();
+      provider.loadTrabajadores();
+      provider.loadRegistros();
+    });
   }
 
   @override

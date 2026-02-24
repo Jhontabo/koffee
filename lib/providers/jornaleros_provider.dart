@@ -44,6 +44,13 @@ class JornalerosProvider extends ChangeNotifier {
         notifyListeners();
       }
     });
+
+    final currentUser = AuthService.instance.currentUser;
+    if (currentUser != null) {
+      _userId = currentUser.uid;
+      loadTrabajadores();
+      loadRegistros();
+    }
   }
 
   @override
