@@ -5,6 +5,11 @@ import '../models/trabajador.dart';
 import '../models/registro_recolector.dart';
 import '../services/auth_service.dart';
 
+void _debugPrint(String message) {
+  // ignore: avoid_print
+  print(message);
+}
+
 class JornalerosProvider extends ChangeNotifier {
   List<Trabajador> _trabajadores = [];
   List<RegistroRecolector> _registros = [];
@@ -158,7 +163,6 @@ class JornalerosProvider extends ChangeNotifier {
     try {
       final snapshot = await _registrosRecolectorCollection
           .where('userId', isEqualTo: _userId)
-          .orderBy('fecha', descending: true)
           .get();
 
       _registros = snapshot.docs.map((doc) {
@@ -181,9 +185,18 @@ class JornalerosProvider extends ChangeNotifier {
         );
       }).toList();
 
+      // Ordenar por fecha descendente
+      _registros.sort((a, b) => b.fecha.compareTo(a.fecha));
+
+      _debugPrint('=== loadRegistros ===');
+      _debugPrint('UserID: $_userId');
+      _debugPrint('Registros encontrados: ${_registros.length}');
+
       notifyListeners();
     } catch (e) {
       _error = 'Error cargando registros: $e';
+      _debugPrint('=== ERROR loadRegistros ===');
+      _debugPrint('$e');
     } finally {
       _isLoading = false;
       notifyListeners();
