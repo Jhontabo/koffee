@@ -31,11 +31,21 @@ class JornalerosProvider extends ChangeNotifier {
   }
 
   void _init() {
+    // Primero verificar si ya hay usuario autenticado
+    final currentUser = AuthService.instance.currentUser;
+    if (currentUser != null) {
+      _userId = currentUser.uid;
+      loadTrabajadores();
+      loadRegistros();
+    }
+
+    // También escuchar cambios futuros
     _authSubscription = AuthService.instance.authStateChanges.listen((
       user,
     ) async {
       if (user != null) {
         _userId = user.uid;
+        notifyListeners();
         await loadTrabajadores();
         await loadRegistros();
       } else {
@@ -45,13 +55,6 @@ class JornalerosProvider extends ChangeNotifier {
         notifyListeners();
       }
     });
-
-    final currentUser = AuthService.instance.currentUser;
-    if (currentUser != null) {
-      _userId = currentUser.uid;
-      loadTrabajadores();
-      loadRegistros();
-    }
   }
 
   @override
@@ -64,9 +67,9 @@ class JornalerosProvider extends ChangeNotifier {
     if (_userId == null) return;
 
     try {
+      _error = null;
       final snapshot = await _trabajadoresCollection
           .where('userId', isEqualTo: _userId)
-          .orderBy('nombre', descending: false)
           .get();
 
       _trabajadores = snapshot.docs.map((doc) {
@@ -80,6 +83,9 @@ class JornalerosProvider extends ChangeNotifier {
           firebaseId: doc.id,
         );
       }).toList();
+
+      // Ordenar alfabéticamente
+      _trabajadores.sort((a, b) => a.nombre.compareTo(b.nombre));
 
       notifyListeners();
     } catch (e) {
@@ -295,6 +301,11 @@ class JornalerosProvider extends ChangeNotifier {
       fechaFin: fechaFin,
     );
     return registros.fold(0.0, (sum, reg) => sum + reg.total);
+  }
+
+  Future<void> refresh() async {
+    await loadTrabajadores();
+    await loadRegistros();
   }
 
   Map<String, double> getKilosPorTrabajadorSemana(DateTime fechaReferencia) {
