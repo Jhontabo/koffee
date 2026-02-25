@@ -176,7 +176,7 @@ class _RegistroCard extends StatelessWidget {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          registro.finca,
+                          registro.fibra,
                           style: const TextStyle(
                             fontWeight: FontWeight.bold,
                             fontSize: 16,
@@ -263,7 +263,7 @@ class _RegistroCard extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _detailRow('Finca', registro.finca.toUpperCase()),
+              _detailRow('Finca', registro.fibra.toUpperCase()),
               _detailRow('Fecha', dateFormat.format(registro.fecha)),
               _detailRow('Kilos', '${registro.kilosRojo} kg'),
               _detailRow('Sincronizado', registro.isSynced ? 'Sí' : 'No'),
@@ -330,7 +330,7 @@ class _RegistroCard extends StatelessWidget {
                       const SizedBox(width: 4),
                       Expanded(
                         child: Text(
-                          registro.finca.toUpperCase(),
+                          registro.fibra.toUpperCase(),
                           style: TextStyle(
                             fontWeight: FontWeight.bold,
                             color: Colors.red.shade700,

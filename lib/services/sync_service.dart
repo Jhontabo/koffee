@@ -72,7 +72,7 @@ class SyncService {
 
         final registro = RegistroFinca(
           fecha: DateTime.parse(data['fecha'] as String),
-          finca: data['finca'] as String,
+          fibra: data['fibra'] as String? ?? '',
           kilosRojo: (data['kilosRojo'] as num?)?.toDouble() ?? 0.0,
           firebaseId: doc.id,
         );

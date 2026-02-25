@@ -2,8 +2,11 @@ class RegistroFinca {
   final int? id;
   final String userId;
   final DateTime fecha;
-  final String finca;
+  final String fibra;
   final double kilosRojo;
+  final double kilosSeco;
+  final double precioKilo;
+  final double total;
   final bool isSynced;
   final String? firebaseId;
 
@@ -11,8 +14,11 @@ class RegistroFinca {
     this.id,
     this.userId = '',
     required this.fecha,
-    required this.finca,
+    required this.fibra,
     this.kilosRojo = 0,
+    this.kilosSeco = 0,
+    this.precioKilo = 0,
+    this.total = 0,
     this.isSynced = false,
     this.firebaseId,
   });
@@ -22,8 +28,11 @@ class RegistroFinca {
       'id': id,
       'userId': userId,
       'fecha': fecha.toIso8601String(),
-      'finca': finca,
+      'fibra': fibra,
       'kilosRojo': kilosRojo,
+      'kilosSeco': kilosSeco,
+      'precioKilo': precioKilo,
+      'total': total,
       'isSynced': isSynced ? 1 : 0,
       'firebaseId': firebaseId,
     };
@@ -36,8 +45,11 @@ class RegistroFinca {
       fecha: map['fecha'] != null
           ? DateTime.parse(map['fecha'] as String)
           : DateTime.now(),
-      finca: map['finca'] as String? ?? '',
+      fibra: map['fibra'] as String? ?? '',
       kilosRojo: (map['kilosRojo'] as num?)?.toDouble() ?? 0,
+      kilosSeco: (map['kilosSeco'] as num?)?.toDouble() ?? 0,
+      precioKilo: (map['precioKilo'] as num?)?.toDouble() ?? 0,
+      total: (map['total'] as num?)?.toDouble() ?? 0,
       isSynced: map['isSynced'] == 1,
       firebaseId: map['firebaseId'] as String?,
     );
@@ -47,8 +59,11 @@ class RegistroFinca {
     return {
       'userId': userId,
       'fecha': fecha.toIso8601String(),
-      'finca': finca,
+      'fibra': fibra,
       'kilosRojo': kilosRojo,
+      'kilosSeco': kilosSeco,
+      'precioKilo': precioKilo,
+      'total': total,
       'isSynced': true,
     };
   }
@@ -57,8 +72,11 @@ class RegistroFinca {
     int? id,
     String? userId,
     DateTime? fecha,
-    String? finca,
+    String? fibra,
     double? kilosRojo,
+    double? kilosSeco,
+    double? precioKilo,
+    double? total,
     bool? isSynced,
     String? firebaseId,
   }) {
@@ -66,8 +84,11 @@ class RegistroFinca {
       id: id ?? this.id,
       userId: userId ?? this.userId,
       fecha: fecha ?? this.fecha,
-      finca: finca ?? this.finca,
+      fibra: fibra ?? this.fibra,
       kilosRojo: kilosRojo ?? this.kilosRojo,
+      kilosSeco: kilosSeco ?? this.kilosSeco,
+      precioKilo: precioKilo ?? this.precioKilo,
+      total: total ?? this.total,
       isSynced: isSynced ?? this.isSynced,
       firebaseId: firebaseId ?? this.firebaseId,
     );

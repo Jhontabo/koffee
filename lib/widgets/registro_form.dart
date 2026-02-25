@@ -17,17 +17,29 @@ class _RegistroFormState extends State<RegistroForm> {
   final _formKey = GlobalKey<FormState>();
   final _fechaController = TextEditingController();
   final _fincaController = TextEditingController();
-  final _kilosController = TextEditingController();
+  final _kilosSecoController = TextEditingController();
+  final _precioController = TextEditingController();
 
   DateTime _selectedDate = DateTime.now();
   List<String> _fincasList = [];
   String? _lastUserId;
+  double _totalCalculado = 0;
 
   @override
   void initState() {
     super.initState();
+    _kilosSecoController.addListener(_calcularTotal);
+    _precioController.addListener(_calcularTotal);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadPreferences();
+    });
+  }
+
+  void _calcularTotal() {
+    final kilos = double.tryParse(_kilosSecoController.text) ?? 0;
+    final precio = double.tryParse(_precioController.text) ?? 0;
+    setState(() {
+      _totalCalculado = kilos * precio;
     });
   }
 
@@ -64,7 +76,8 @@ class _RegistroFormState extends State<RegistroForm> {
   void dispose() {
     _fechaController.dispose();
     _fincaController.dispose();
-    _kilosController.dispose();
+    _kilosSecoController.dispose();
+    _precioController.dispose();
     super.dispose();
   }
 
@@ -85,27 +98,33 @@ class _RegistroFormState extends State<RegistroForm> {
 
   void _submit() {
     if (_formKey.currentState!.validate()) {
-      final kilos = double.parse(_kilosController.text);
+      final kilosSeco = double.parse(_kilosSecoController.text);
+      final precioKilo = double.parse(_precioController.text);
+      final total = kilosSeco * precioKilo;
 
       final registro = RegistroFinca(
         fecha: _selectedDate,
-        finca: _fincaController.text.trim(),
-        kilosRojo: kilos,
+        fibra: _fincaController.text.trim(),
+        kilosSeco: kilosSeco,
+        precioKilo: precioKilo,
+        total: total,
       );
 
       context.read<RegistroProvider>().addRegistro(registro);
       _clearForm();
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text('Kilos registrados')));
+      ).showSnackBar(const SnackBar(content: Text('Venta registrada')));
     }
   }
 
   void _clearForm() {
-    _kilosController.clear();
+    _kilosSecoController.clear();
+    _precioController.clear();
     setState(() {
       _selectedDate = DateTime.now();
       _fechaController.text = DateFormat('yyyy-MM-dd').format(_selectedDate);
+      _totalCalculado = 0;
     });
   }
 
@@ -172,6 +191,11 @@ class _RegistroFormState extends State<RegistroForm> {
   }
 
   Widget _buildForm() {
+    final currencyFormat = NumberFormat.currency(
+      symbol: '\$',
+      decimalDigits: 0,
+    );
+
     return Form(
       key: _formKey,
       child: SingleChildScrollView(
@@ -180,11 +204,11 @@ class _RegistroFormState extends State<RegistroForm> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             const Text(
-              'Café Rojo',
+              'Café Seco - Venta',
               style: TextStyle(
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
-                color: Colors.red,
+                color: Colors.brown,
               ),
             ),
             const SizedBox(height: 24),
@@ -208,12 +232,12 @@ class _RegistroFormState extends State<RegistroForm> {
             _buildFincaField(),
             const SizedBox(height: 16),
             TextFormField(
-              controller: _kilosController,
+              controller: _kilosSecoController,
               decoration: const InputDecoration(
-                labelText: 'Kilos',
+                labelText: 'Kilos de café seco',
                 border: OutlineInputBorder(),
-                prefixIcon: Icon(Icons.scale, color: Colors.red),
-                hintText: 'Cantidad de kilos de café',
+                prefixIcon: Icon(Icons.scale, color: Colors.brown),
+                hintText: 'Cantidad de kilos',
               ),
               keyboardType: const TextInputType.numberWithOptions(
                 decimal: true,
@@ -232,13 +256,65 @@ class _RegistroFormState extends State<RegistroForm> {
                 return null;
               },
             ),
+            const SizedBox(height: 16),
+            TextFormField(
+              controller: _precioController,
+              decoration: const InputDecoration(
+                labelText: 'Precio por kilo',
+                border: OutlineInputBorder(),
+                prefixIcon: Icon(Icons.attach_money),
+                hintText: 'Valor por kilo',
+              ),
+              keyboardType: const TextInputType.numberWithOptions(
+                decimal: true,
+              ),
+              inputFormatters: [
+                FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
+              ],
+              validator: (value) {
+                if (value == null || value.isEmpty) {
+                  return 'Ingrese el precio';
+                }
+                if (double.tryParse(value) == null ||
+                    double.parse(value) <= 0) {
+                  return 'Ingrese un valor válido';
+                }
+                return null;
+              },
+            ),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.green[50],
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.green),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'Total:',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  Text(
+                    currencyFormat.format(_totalCalculado),
+                    style: TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.green[800],
+                    ),
+                  ),
+                ],
+              ),
+            ),
             const SizedBox(height: 24),
             ElevatedButton.icon(
               onPressed: _submit,
               icon: const Icon(Icons.save),
-              label: const Text('Guardar'),
+              label: const Text('Guardar Venta'),
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.red,
+                backgroundColor: Colors.brown[900],
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(vertical: 16),
               ),
@@ -264,11 +340,8 @@ class _RegistroFormState extends State<RegistroForm> {
       ),
       isExpanded: true,
       hint: const Text('Seleccionar o agregar finca'),
-      items: _fincasList.map((finca) {
-        return DropdownMenuItem<String>(
-          value: finca,
-          child: Text(finca.toUpperCase()),
-        );
+      items: _fincasList.map((f) {
+        return DropdownMenuItem<String>(value: f, child: Text(f.toUpperCase()));
       }).toList(),
       onChanged: (value) {
         if (value != null) {

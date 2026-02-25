@@ -143,7 +143,7 @@ class PdfService {
       data: registros.map((reg) {
         return [
           dateFormat.format(reg.fecha),
-          reg.finca,
+          reg.fibra,
           '${reg.kilosRojo.toStringAsFixed(2)} kg',
         ];
       }).toList(),

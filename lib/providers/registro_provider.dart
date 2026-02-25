@@ -265,11 +265,11 @@ class RegistroProvider extends ChangeNotifier {
     _kilosByFinca = {};
     for (final registro in _registros) {
       final totalKilos = registro.kilosRojo;
-      if (_kilosByFinca.containsKey(registro.finca)) {
-        _kilosByFinca[registro.finca] =
-            _kilosByFinca[registro.finca]! + totalKilos;
+      if (_kilosByFinca.containsKey(registro.fibra)) {
+        _kilosByFinca[registro.fibra] =
+            _kilosByFinca[registro.fibra]! + totalKilos;
       } else {
-        _kilosByFinca[registro.finca] = totalKilos;
+        _kilosByFinca[registro.fibra] = totalKilos;
       }
     }
   }
