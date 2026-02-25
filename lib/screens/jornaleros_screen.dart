@@ -23,9 +23,18 @@ class _JornalerosScreenState extends State<JornalerosScreen>
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
+    // Cargar datos inmediatamente al iniciar
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _refreshData();
+      _loadInitialData();
     });
+  }
+
+  Future<void> _loadInitialData() async {
+    final provider = context.read<JornalerosProvider>();
+    // Si no tiene datos, forzar carga
+    if (provider.trabajadores.isEmpty || provider.registros.isEmpty) {
+      await provider.refresh();
+    }
   }
 
   void _refreshData() {
@@ -53,7 +62,15 @@ class _JornalerosScreenState extends State<JornalerosScreen>
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
-            onPressed: _refreshData,
+            onPressed: () {
+              _refreshData();
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Actualizando...'),
+                  duration: Duration(seconds: 1),
+                ),
+              );
+            },
             tooltip: 'Actualizar',
           ),
           PopupMenuButton<String>(
