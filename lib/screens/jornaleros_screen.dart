@@ -24,9 +24,18 @@ class _JornalerosScreenState extends State<JornalerosScreen>
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final provider = context.read<JornalerosProvider>();
-      provider.loadTrabajadores();
-      provider.loadRegistros();
+      _refreshData();
+    });
+  }
+
+  void _refreshData() {
+    final provider = context.read<JornalerosProvider>();
+    debugPrint('=== REFRESH ===');
+    debugPrint('UserID: ${provider.userId}');
+    debugPrint('Has user: ${provider.hasUser}');
+    debugPrint('Trabajadores antes: ${provider.trabajadores.length}');
+    provider.refresh().then((_) {
+      debugPrint('Trabajadores después: ${provider.trabajadores.length}');
     });
   }
 
@@ -41,15 +50,12 @@ class _JornalerosScreenState extends State<JornalerosScreen>
     return Scaffold(
       appBar: AppBar(
         title: const Text('Jornaleros'),
-        bottom: TabBar(
-          controller: _tabController,
-          tabs: const [
-            Tab(icon: Icon(Icons.people), text: 'Trabajadores'),
-            Tab(icon: Icon(Icons.add_box), text: 'Registrar'),
-            Tab(icon: Icon(Icons.list), text: 'Registros'),
-          ],
-        ),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: _refreshData,
+            tooltip: 'Actualizar',
+          ),
           PopupMenuButton<String>(
             icon: const Icon(Icons.picture_as_pdf),
             tooltip: 'Generar PDF',
@@ -79,12 +85,26 @@ class _JornalerosScreenState extends State<JornalerosScreen>
           ),
         ],
       ),
-      body: TabBarView(
-        controller: _tabController,
-        children: const [
-          _TrabajadoresTab(),
-          _RegistrarKilosTab(),
-          _ListaRegistrosTab(),
+      body: Column(
+        children: [
+          TabBar(
+            controller: _tabController,
+            tabs: const [
+              Tab(icon: Icon(Icons.people), text: 'Trabajadores'),
+              Tab(icon: Icon(Icons.add_box), text: 'Registrar'),
+              Tab(icon: Icon(Icons.list), text: 'Registros'),
+            ],
+          ),
+          Expanded(
+            child: TabBarView(
+              controller: _tabController,
+              children: const [
+                _TrabajadoresTab(),
+                _RegistrarKilosTab(),
+                _ListaRegistrosTab(),
+              ],
+            ),
+          ),
         ],
       ),
     );
