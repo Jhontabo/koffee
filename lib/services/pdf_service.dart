@@ -20,10 +20,12 @@ class PdfService {
     final fontBold = await PdfGoogleFonts.openSansBold();
 
     // Calculate totals
-    double totalRojo = 0;
+    double totalSeco = 0;
+    double totalVenta = 0;
 
     for (var reg in registros) {
-      totalRojo += reg.kilosRojo;
+      totalSeco += reg.kilosSeco;
+      totalVenta += reg.total;
     }
 
     // Format numbers
@@ -41,14 +43,30 @@ class PdfService {
         build: (context) => [
           _buildHeader(title, startDate, endDate),
           pw.SizedBox(height: 20),
-          _buildSummary(totalRojo, currencyFormat),
+          _buildSummary(totalSeco, totalVenta, currencyFormat),
           pw.SizedBox(height: 20),
           pw.Text(
             'Detalle de Registros',
             style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold),
           ),
           pw.SizedBox(height: 10),
-          _buildTable(registros, dateFormat),
+          pw.Table.fromTextArray(
+            headers: ['Fecha', 'Finca', 'Kilos Seco', 'Precio/kg', 'Total'],
+            headerStyle: pw.TextStyle(
+              fontWeight: pw.FontWeight.bold,
+              color: PdfColors.white,
+            ),
+            headerDecoration: const pw.BoxDecoration(color: PdfColors.brown900),
+            data: registros.map((reg) {
+              return [
+                dateFormat.format(reg.fecha),
+                reg.fibra,
+                '${reg.kilosSeco.toStringAsFixed(2)} kg',
+                currencyFormat.format(reg.precioKilo),
+                currencyFormat.format(reg.total),
+              ];
+            }).toList(),
+          ),
           pw.SizedBox(height: 20),
           _buildFooter(),
         ],
@@ -89,7 +107,11 @@ class PdfService {
     );
   }
 
-  static pw.Widget _buildSummary(double rojo, NumberFormat currency) {
+  static pw.Widget _buildSummary(
+    double seco,
+    double venta,
+    NumberFormat currency,
+  ) {
     return pw.Container(
       padding: const pw.EdgeInsets.all(12),
       decoration: pw.BoxDecoration(
@@ -101,9 +123,14 @@ class PdfService {
         mainAxisAlignment: pw.MainAxisAlignment.spaceAround,
         children: [
           _buildSummaryItem(
-            'Total Café Rojo',
-            '${rojo.toStringAsFixed(2)} kg',
-            PdfColors.red800,
+            'Total Café Seco',
+            '${seco.toStringAsFixed(2)} kg',
+            PdfColors.brown600,
+          ),
+          _buildSummaryItem(
+            'Total Venta',
+            currency.format(venta),
+            PdfColors.green800,
           ),
         ],
       ),
@@ -137,14 +164,17 @@ class PdfService {
   static pw.Widget _buildTable(
     List<RegistroFinca> registros,
     DateFormat dateFormat,
+    NumberFormat currency,
   ) {
     return pw.Table.fromTextArray(
-      headers: ['Fecha', 'Finca', 'Kilos'],
+      headers: ['Fecha', 'Finca', 'Kilos Seco', 'Precio/kg', 'Total'],
       data: registros.map((reg) {
         return [
           dateFormat.format(reg.fecha),
           reg.fibra,
-          '${reg.kilosRojo.toStringAsFixed(2)} kg',
+          '${reg.kilosSeco.toStringAsFixed(2)} kg',
+          currency.format(reg.precioKilo),
+          currency.format(reg.total),
         ];
       }).toList(),
       headerStyle: pw.TextStyle(

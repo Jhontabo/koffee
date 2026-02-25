@@ -197,8 +197,11 @@ class RegistroProvider extends ChangeNotifier {
           fecha: data['fecha'] != null
               ? DateTime.parse(data['fecha'] as String)
               : DateTime.now(),
-          finca: data['finca'] as String? ?? '',
+          fibra: data['fibra'] as String? ?? '',
+          kilosSeco: (data['kilosSeco'] as num?)?.toDouble() ?? 0.0,
           kilosRojo: (data['kilosRojo'] as num?)?.toDouble() ?? 0.0,
+          precioKilo: (data['precioKilo'] as num?)?.toDouble() ?? 0.0,
+          total: (data['total'] as num?)?.toDouble() ?? 0.0,
           isSynced: true,
         );
       }).toList();

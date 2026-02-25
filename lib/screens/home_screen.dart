@@ -1,15 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../providers/registro_provider.dart';
-import '../services/pdf_service.dart';
 import '../services/auth_service.dart';
-import '../widgets/registro_list_view.dart';
-import '../widgets/kilos_bar_chart.dart';
 import '../widgets/home_dashboard.dart';
 import 'fincas_screen.dart';
 import 'perfil_screen.dart';
-import 'jornaleros_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -21,13 +16,7 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   int _selectedIndex = 0;
 
-  final List<String> _titles = const [
-    'Inicio',
-    'Registros',
-    'Fincas',
-    'Gráfica',
-    'Perfil',
-  ];
+  final List<String> _titles = const ['Inicio', 'Fincas', 'Perfil'];
 
   void navigateToTab(int index) {
     if (index >= 0 && index < _titles.length) {
@@ -40,8 +29,6 @@ class _HomeScreenState extends State<HomeScreen> {
   void _onItemTapped(int index) {
     if (index != _selectedIndex) {
       if (index == 1) {
-        context.read<RegistroProvider>().loadRegistros();
-      } else if (index == 2) {
         context.read<RegistroProvider>().loadFincas();
       }
       setState(() {
@@ -60,20 +47,6 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
         centerTitle: true,
         actions: [
-          if (_selectedIndex == 1) ...[
-            IconButton(
-              icon: const Icon(Icons.print),
-              tooltip: 'Generar Reporte PDF',
-              onPressed: () => _showPdfDialog(context),
-            ),
-            IconButton(
-              icon: const Icon(Icons.refresh),
-              tooltip: 'Actualizar',
-              onPressed: () {
-                context.read<RegistroProvider>().syncRecords();
-              },
-            ),
-          ],
           PopupMenuButton<String>(
             icon: const Icon(Icons.person),
             tooltip: 'Usuario',
@@ -99,13 +72,7 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
       body: IndexedStack(
         index: _selectedIndex,
-        children: const [
-          HomeDashboard(),
-          RegistroListView(),
-          FincasScreen(),
-          KilosBarChart(),
-          PerfilScreen(),
-        ],
+        children: const [HomeDashboard(), FincasScreen(), PerfilScreen()],
       ),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
@@ -128,19 +95,9 @@ class _HomeScreenState extends State<HomeScreen> {
               label: 'Inicio',
             ),
             NavigationDestination(
-              icon: Icon(Icons.assignment_outlined),
-              selectedIcon: Icon(Icons.assignment),
-              label: 'Registros',
-            ),
-            NavigationDestination(
               icon: Icon(Icons.landscape_outlined),
               selectedIcon: Icon(Icons.landscape),
               label: 'Fincas',
-            ),
-            NavigationDestination(
-              icon: Icon(Icons.insert_chart_outlined),
-              selectedIcon: Icon(Icons.insert_chart),
-              label: 'Gráfica',
             ),
             NavigationDestination(
               icon: Icon(Icons.person_outlined),
@@ -151,107 +108,6 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
       ),
     );
-  }
-
-  void _showPdfDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Generar Reporte PDF'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: const Icon(
-                Icons.calendar_view_week,
-                color: Colors.brown,
-              ),
-              title: const Text('Esta Semana'),
-              onTap: () {
-                Navigator.pop(ctx);
-                final now = DateTime.now();
-                _generateReport(
-                  now.subtract(const Duration(days: 7)),
-                  now,
-                  'Reporte Semanal',
-                );
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.calendar_month, color: Colors.brown),
-              title: const Text('Este Mes'),
-              onTap: () {
-                Navigator.pop(ctx);
-                final now = DateTime.now();
-                final startOfMonth = DateTime(now.year, now.month, 1);
-                _generateReport(
-                  startOfMonth,
-                  now,
-                  'Reporte Mensual (${DateFormat('MMMM', 'es').format(now)})',
-                );
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.history, color: Colors.brown),
-              title: const Text('Todo el Historial'),
-              onTap: () {
-                Navigator.pop(ctx);
-                _generateReport(
-                  DateTime(2020),
-                  DateTime.now(),
-                  'Reporte Histórico Completo',
-                );
-              },
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancelar'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Future<void> _generateReport(
-    DateTime start,
-    DateTime end,
-    String title,
-  ) async {
-    final provider = context.read<RegistroProvider>();
-    // Filter records locally
-    final allRecords = provider.registros;
-    final filtered = allRecords.where((reg) {
-      final date = reg.fecha;
-      return date.isAfter(start.subtract(const Duration(days: 1))) &&
-          date.isBefore(end.add(const Duration(days: 1)));
-    }).toList();
-
-    if (filtered.isEmpty) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('No hay registros en este periodo')),
-        );
-      }
-      return;
-    }
-
-    try {
-      await PdfService.generateReport(
-        title: title,
-        registros: filtered,
-        startDate: start,
-        endDate: end,
-      );
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Error generando PDF: $e')));
-      }
-    }
   }
 
   void _showLogoutDialog(BuildContext context) {

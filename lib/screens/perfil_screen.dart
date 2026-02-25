@@ -4,7 +4,6 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
 import '../providers/registro_provider.dart';
 import '../services/auth_service.dart';
-import '../services/usuario_service.dart';
 
 class PerfilScreen extends StatefulWidget {
   const PerfilScreen({super.key});
@@ -16,80 +15,180 @@ class PerfilScreen extends StatefulWidget {
 class _PerfilScreenState extends State<PerfilScreen> {
   @override
   Widget build(BuildContext context) {
+    final currencyFormat = NumberFormat.currency(
+      symbol: '\$',
+      decimalDigits: 0,
+    );
+
     return Scaffold(
-      appBar: AppBar(title: const Text('Mi Perfil'), centerTitle: true),
       body: Consumer<RegistroProvider>(
         builder: (context, provider, child) {
-          final usuario = provider.userId;
+          final user = AuthService.instance.currentUser;
+          final email = user?.email ?? 'No disponible';
+          final registros = provider.registros;
+          final fincas = provider.fincasList;
 
-          return SingleChildScrollView(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              children: [
-                _buildProfileHeader(context, provider),
-                const SizedBox(height: 24),
-                _buildStatsCard(context, provider),
-                const SizedBox(height: 24),
-                _buildActionsCard(context),
-              ],
-            ),
+          final totalVentas = registros.fold<double>(
+            0,
+            (sum, r) => sum + r.total,
+          );
+
+          final totalKilosSeco = registros.fold<double>(
+            0,
+            (sum, r) => sum + r.kilosSeco,
+          );
+
+          return CustomScrollView(
+            slivers: [
+              SliverAppBar(
+                expandedHeight: 200,
+                pinned: true,
+                backgroundColor: Colors.brown[900],
+                flexibleSpace: FlexibleSpaceBar(
+                  background: Container(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [Colors.brown[900]!, Colors.brown[700]!],
+                      ),
+                    ),
+                    child: SafeArea(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const SizedBox(height: 20),
+                          CircleAvatar(
+                            radius: 45,
+                            backgroundColor: Colors.white,
+                            child: Icon(
+                              Icons.person,
+                              size: 50,
+                              color: Colors.brown[900],
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          Text(
+                            email.split('@').first.toUpperCase(),
+                            style: const TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                          Text(
+                            email,
+                            style: const TextStyle(
+                              fontSize: 14,
+                              color: Colors.white70,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildResumenSection(
+                        context,
+                        currencyFormat,
+                        registros.length,
+                        fincas.length,
+                        totalKilosSeco,
+                        totalVentas,
+                      ),
+                      const SizedBox(height: 20),
+                      _buildInfoCard(context, email),
+                      const SizedBox(height: 20),
+                      _buildAccionesSection(context),
+                      const SizedBox(height: 20),
+                      _buildInfoApp(),
+                    ],
+                  ),
+                ),
+              ),
+            ],
           );
         },
       ),
     );
   }
 
-  Widget _buildProfileHeader(BuildContext context, RegistroProvider provider) {
-    final user = AuthService.instance.currentUser;
-    final email = user?.email ?? 'No disponible';
-    final nombre = provider.rol != 'usuario' ? provider.rol : 'Usuario';
-
-    return Card(
-      elevation: 2,
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
+  Widget _buildResumenSection(
+    BuildContext context,
+    NumberFormat currency,
+    int totalVentas,
+    int totalFincas,
+    double kilosSeco,
+    double ingresos,
+  ) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Resumen',
+          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 12),
+        Row(
           children: [
-            CircleAvatar(
-              radius: 50,
-              backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-              child: Icon(
-                Icons.person,
-                size: 50,
-                color: Theme.of(context).colorScheme.primary,
+            Expanded(
+              child: _buildStatCard(
+                icon: Icons.sell,
+                label: 'Ventas',
+                value: '$totalVentas',
+                color: Colors.green,
               ),
             ),
-            const SizedBox(height: 16),
-            Text(
-              nombre.toUpperCase(),
-              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              email,
-              style: TextStyle(fontSize: 16, color: Colors.grey[600]),
-            ),
-            const SizedBox(height: 16),
-            OutlinedButton.icon(
-              onPressed: () => _showEditNameDialog(context, provider),
-              icon: const Icon(Icons.edit),
-              label: const Text('Editar Perfil'),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _buildStatCard(
+                icon: Icons.landscape,
+                label: 'Fincas',
+                value: '$totalFincas',
+                color: Colors.brown,
+              ),
             ),
           ],
         ),
-      ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(
+              child: _buildStatCard(
+                icon: Icons.scale,
+                label: 'Kilos Secos',
+                value: '${kilosSeco.toStringAsFixed(1)} kg',
+                color: Colors.orange,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _buildStatCard(
+                icon: Icons.attach_money,
+                label: 'Ingresos',
+                value: currency.format(ingresos),
+                color: Colors.green,
+              ),
+            ),
+          ],
+        ),
+      ],
     );
   }
 
-  Widget _buildStatsCard(BuildContext context, RegistroProvider provider) {
-    final registros = provider.registros;
-    final fincas = provider.fincasList;
-
-    final totalKilosRojo = registros.fold<double>(
-      0,
-      (sum, r) => sum + r.kilosRojo,
-    );
-
+  Widget _buildStatCard({
+    required IconData icon,
+    required String label,
+    required String value,
+    required Color color,
+  }) {
     return Card(
       elevation: 2,
       child: Padding(
@@ -97,35 +196,26 @@ class _PerfilScreenState extends State<PerfilScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              children: [
-                Icon(
-                  Icons.analytics,
-                  color: Theme.of(context).colorScheme.primary,
-                ),
-                const SizedBox(width: 8),
-                const Text(
-                  'Mis Estadísticas',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                ),
-              ],
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(icon, color: color, size: 24),
             ),
-            const Divider(),
-            _buildStatRow(
-              icon: Icons.assignment,
-              label: 'Total Registros',
-              value: '${registros.length}',
+            const SizedBox(height: 12),
+            Text(
+              value,
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: color,
+              ),
             ),
-            _buildStatRow(
-              icon: Icons.landscape,
-              label: 'Fincas',
-              value: '${fincas.length}',
-            ),
-            _buildStatRow(
-              icon: Icons.circle,
-              label: 'Kilos Rojos',
-              value: '${totalKilosRojo.toStringAsFixed(1)} kg',
-              color: Colors.red,
+            Text(
+              label,
+              style: TextStyle(fontSize: 12, color: Colors.grey[600]),
             ),
           ],
         ),
@@ -133,17 +223,54 @@ class _PerfilScreenState extends State<PerfilScreen> {
     );
   }
 
-  Widget _buildStatRow({
+  Widget _buildInfoCard(BuildContext context, String email) {
+    return Card(
+      elevation: 2,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Información de la Cuenta',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 16),
+            _buildInfoRow(
+              icon: Icons.email,
+              label: 'Correo electrónico',
+              value: email,
+            ),
+            const Divider(),
+            _buildInfoRow(
+              icon: Icons.calendar_today,
+              label: 'Miembro desde',
+              value: DateFormat('MMMM yyyy', 'es').format(DateTime.now()),
+            ),
+            const Divider(),
+            _buildInfoRow(
+              icon: Icons.verified_user,
+              label: 'Estado',
+              value: 'Activo',
+              valueColor: Colors.green,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildInfoRow({
     required IconData icon,
     required String label,
     required String value,
-    Color? color,
+    Color? valueColor,
   }) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: Row(
         children: [
-          Icon(icon, size: 20, color: color ?? Colors.grey[600]),
+          Icon(icon, size: 20, color: Colors.grey[600]),
           const SizedBox(width: 12),
           Expanded(
             child: Text(
@@ -153,31 +280,51 @@ class _PerfilScreenState extends State<PerfilScreen> {
           ),
           Text(
             value,
-            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+              color: valueColor,
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildActionsCard(BuildContext context) {
+  Widget _buildAccionesSection(BuildContext context) {
     return Card(
       elevation: 2,
       child: Column(
         children: [
           ListTile(
-            leading: const Icon(Icons.lock),
+            leading: Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.blue.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Icon(Icons.lock, color: Colors.blue),
+            ),
             title: const Text('Cambiar Contraseña'),
+            subtitle: const Text('Restablecer tu contraseña'),
             trailing: const Icon(Icons.chevron_right),
             onTap: () => _showChangePasswordDialog(context),
           ),
           const Divider(height: 1),
           ListTile(
-            leading: Icon(Icons.logout, color: Colors.red[700]),
+            leading: Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.red.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(Icons.logout, color: Colors.red[700]),
+            ),
             title: Text(
               'Cerrar Sesión',
               style: TextStyle(color: Colors.red[700]),
             ),
+            subtitle: const Text('Salir de tu cuenta'),
             onTap: () => _showLogoutDialog(context),
           ),
         ],
@@ -185,57 +332,26 @@ class _PerfilScreenState extends State<PerfilScreen> {
     );
   }
 
-  void _showEditNameDialog(BuildContext context, RegistroProvider provider) {
-    final user = AuthService.instance.currentUser;
-    if (user == null) return;
-
-    final controller = TextEditingController(text: user.displayName ?? '');
-
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Editar Perfil'),
-        content: TextField(
-          controller: controller,
-          decoration: const InputDecoration(
-            labelText: 'Nombre',
-            border: OutlineInputBorder(),
-            hintText: 'Ingresa tu nombre',
-          ),
-          textCapitalization: TextCapitalization.words,
+  Widget _buildInfoApp() {
+    return Card(
+      color: Colors.grey[100],
+      elevation: 0,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.coffee, color: Colors.brown[700], size: 24),
+            const SizedBox(width: 8),
+            Text(
+              'Koffee v1.0',
+              style: TextStyle(
+                color: Colors.grey[600],
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancelar'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              if (controller.text.trim().isNotEmpty) {
-                try {
-                  await user.updateDisplayName(controller.text.trim());
-                  await UsuarioService.instance.actualizarUsuario(
-                    userId: user.uid,
-                    nombre: controller.text.trim(),
-                  );
-                  if (context.mounted) {
-                    Navigator.pop(ctx);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Perfil actualizado')),
-                    );
-                  }
-                } catch (e) {
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(
-                      context,
-                    ).showSnackBar(SnackBar(content: Text('Error: $e')));
-                  }
-                }
-              }
-            },
-            child: const Text('Guardar'),
-          ),
-        ],
       ),
     );
   }
