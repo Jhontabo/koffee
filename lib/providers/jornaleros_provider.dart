@@ -24,6 +24,7 @@ class JornalerosProvider extends ChangeNotifier {
   bool get isLoading => _isLoading;
   String? get error => _error;
   String? get userId => _userId;
+  bool get hasUser => _userId != null;
 
   JornalerosProvider() {
     _init();

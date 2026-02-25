@@ -229,19 +229,54 @@ class _TrabajadoresTab extends StatelessWidget {
             ),
             Expanded(
               child: provider.trabajadores.isEmpty
-                  ? const Center(
+                  ? Center(
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(
+                          const Icon(
                             Icons.people_outline,
                             size: 64,
                             color: Colors.grey,
                           ),
-                          SizedBox(height: 16),
-                          Text(
+                          const SizedBox(height: 16),
+                          const Text(
                             'No hay trabajadores registrados',
                             style: TextStyle(fontSize: 16, color: Colors.grey),
+                          ),
+                          const SizedBox(height: 8),
+                          if (provider.userId == null)
+                            const Text(
+                              '⚠️ Usuario no autenticado',
+                              style: TextStyle(fontSize: 12, color: Colors.red),
+                            )
+                          else
+                            Text(
+                              'UserID: ${provider.userId?.substring(0, 8)}...',
+                              style: const TextStyle(
+                                fontSize: 10,
+                                color: Colors.grey,
+                              ),
+                            ),
+                          if (provider.error != null) ...[
+                            const SizedBox(height: 8),
+                            Text(
+                              'Error: ${provider.error}',
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: Colors.red,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                          ],
+                          const SizedBox(height: 16),
+                          ElevatedButton(
+                            onPressed: () {
+                              provider.loadTrabajadores();
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('Recargando...')),
+                              );
+                            },
+                            child: const Text('Recargar'),
                           ),
                         ],
                       ),
@@ -330,22 +365,42 @@ class _TrabajadoresTab extends StatelessWidget {
             child: const Text('Cancelar'),
           ),
           ElevatedButton(
-            onPressed: () {
+            onPressed: () async {
               if (nombreController.text.trim().isNotEmpty) {
                 final provider = context.read<JornalerosProvider>();
-                provider.addTrabajador(
+                final userId = provider.userId;
+
+                if (userId == null) {
+                  Navigator.pop(dialogContext);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Error: Usuario no autenticado'),
+                    ),
+                  );
+                  return;
+                }
+
+                await provider.addTrabajador(
                   Trabajador(
-                    userId: '',
+                    userId: userId,
                     nombre: nombreController.text.trim(),
                     telefono: telefonoController.text.trim().isEmpty
                         ? null
                         : telefonoController.text.trim(),
                   ),
                 );
+
                 Navigator.pop(dialogContext);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Trabajador agregado')),
-                );
+
+                if (provider.error != null) {
+                  ScaffoldMessenger.of(
+                    context,
+                  ).showSnackBar(SnackBar(content: Text(provider.error!)));
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Trabajador agregado')),
+                  );
+                }
               }
             },
             child: const Text('Agregar'),
