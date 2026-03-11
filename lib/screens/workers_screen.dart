@@ -2,20 +2,21 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
-import '../models/trabajador.dart';
-import '../models/registro_recolector.dart';
-import '../providers/jornaleros_provider.dart';
-import '../providers/registro_provider.dart';
+import '../models/worker.dart';
+import '../models/worker_record.dart';
+import '../providers/workers_provider.dart';
+import '../providers/records_provider.dart';
 import '../services/pdf_service.dart';
+import '../theme/app_theme.dart';
 
-class JornalerosScreen extends StatefulWidget {
-  const JornalerosScreen({super.key});
+class WorkersScreen extends StatefulWidget {
+  const WorkersScreen({super.key});
 
   @override
-  State<JornalerosScreen> createState() => _JornalerosScreenState();
+  State<WorkersScreen> createState() => _WorkersScreenState();
 }
 
-class _JornalerosScreenState extends State<JornalerosScreen>
+class _WorkersScreenState extends State<WorkersScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
 
@@ -30,21 +31,21 @@ class _JornalerosScreenState extends State<JornalerosScreen>
   }
 
   Future<void> _loadInitialData() async {
-    final provider = context.read<JornalerosProvider>();
+    final provider = context.read<WorkersProvider>();
     // Si no tiene datos, forzar carga
-    if (provider.trabajadores.isEmpty || provider.registros.isEmpty) {
+    if (provider.workers.isEmpty || provider.records.isEmpty) {
       await provider.refresh();
     }
   }
 
   void _refreshData() {
-    final provider = context.read<JornalerosProvider>();
+    final provider = context.read<WorkersProvider>();
     debugPrint('=== REFRESH ===');
     debugPrint('UserID: ${provider.userId}');
     debugPrint('Has user: ${provider.hasUser}');
-    debugPrint('Trabajadores antes: ${provider.trabajadores.length}');
+    debugPrint('Workers antes: ${provider.workers.length}');
     provider.refresh().then((_) {
-      debugPrint('Trabajadores después: ${provider.trabajadores.length}');
+      debugPrint('Workers después: ${provider.workers.length}');
     });
   }
 
@@ -59,6 +60,16 @@ class _JornalerosScreenState extends State<JornalerosScreen>
     return Scaffold(
       appBar: AppBar(
         title: const Text('Jornaleros'),
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [AppPalette.espresso, AppPalette.cocoa],
+            ),
+            borderRadius: BorderRadius.vertical(bottom: Radius.circular(24)),
+          ),
+        ),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
@@ -76,7 +87,7 @@ class _JornalerosScreenState extends State<JornalerosScreen>
           PopupMenuButton<String>(
             icon: const Icon(Icons.picture_as_pdf),
             tooltip: 'Generar PDF',
-            onSelected: (value) => _generarPdf(value),
+            onSelected: (value) => _generatePdf(value),
             itemBuilder: (context) => [
               const PopupMenuItem(
                 value: 'semanal',
@@ -106,6 +117,9 @@ class _JornalerosScreenState extends State<JornalerosScreen>
         children: [
           TabBar(
             controller: _tabController,
+            indicatorColor: AppPalette.caramel,
+            indicatorWeight: 2.8,
+            isScrollable: true,
             tabs: const [
               Tab(icon: Icon(Icons.people), text: 'Trabajadores'),
               Tab(icon: Icon(Icons.add_box), text: 'Registrar'),
@@ -113,13 +127,22 @@ class _JornalerosScreenState extends State<JornalerosScreen>
             ],
           ),
           Expanded(
-            child: TabBarView(
-              controller: _tabController,
-              children: const [
-                _TrabajadoresTab(),
-                _RegistrarKilosTab(),
-                _ListaRegistrosTab(),
-              ],
+            child: Container(
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [Color(0xFFF4EEE7), Color(0xFFF1E8DF)],
+                ),
+              ),
+              child: TabBarView(
+                controller: _tabController,
+                children: const [
+                  _WorkersTab(),
+                  _RegisterKilogramsTab(),
+                  _RecordsListTab(),
+                ],
+              ),
             ),
           ),
         ],
@@ -127,17 +150,17 @@ class _JornalerosScreenState extends State<JornalerosScreen>
     );
   }
 
-  void _generarPdf(String tipo) async {
-    final provider = context.read<JornalerosProvider>();
+  void _generatePdf(String reportType) async {
+    final provider = context.read<WorkersProvider>();
 
-    if (tipo == 'semanal') {
+    if (reportType == 'semanal') {
       final now = DateTime.now();
-      final inicioSemana = now.subtract(Duration(days: now.weekday - 1));
-      final finSemana = inicioSemana.add(const Duration(days: 6));
+      final weekStart = now.subtract(Duration(days: now.weekday - 1));
+      final weekEnd = weekStart.add(const Duration(days: 6));
 
-      final registrosSemana = provider.getRegistrosSemana(now);
+      final weeklyRecords = provider.getWeeklyRecords(now);
 
-      if (registrosSemana.isEmpty) {
+      if (weeklyRecords.isEmpty) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('No hay registros en esta semana')),
@@ -147,11 +170,11 @@ class _JornalerosScreenState extends State<JornalerosScreen>
       }
 
       try {
-        await PdfService.generatePagoReport(
+        await PdfService.generateWorkerPaymentReport(
           title: 'Reporte de Pago Semanal',
-          registros: registrosSemana,
-          startDate: inicioSemana,
-          endDate: finSemana,
+          records: weeklyRecords,
+          startDate: weekStart,
+          endDate: weekEnd,
         );
       } catch (e) {
         if (mounted) {
@@ -160,8 +183,8 @@ class _JornalerosScreenState extends State<JornalerosScreen>
           ).showSnackBar(SnackBar(content: Text('Error generando PDF: $e')));
         }
       }
-    } else if (tipo == 'individual') {
-      if (provider.trabajadores.isEmpty) {
+    } else if (reportType == 'individual') {
+      if (provider.workers.isEmpty) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('No hay trabajadores registrados')),
@@ -170,7 +193,7 @@ class _JornalerosScreenState extends State<JornalerosScreen>
         return;
       }
 
-      final nombreSeleccionado = await showDialog<String>(
+      final selectedWorkerName = await showDialog<String>(
         context: context,
         builder: (ctx) => AlertDialog(
           title: const Text('Seleccionar Trabajador'),
@@ -178,16 +201,14 @@ class _JornalerosScreenState extends State<JornalerosScreen>
             width: double.maxFinite,
             child: ListView.builder(
               shrinkWrap: true,
-              itemCount: provider.trabajadores.length,
+              itemCount: provider.workers.length,
               itemBuilder: (context, index) {
-                final trabajador = provider.trabajadores[index];
+                final worker = provider.workers[index];
                 return ListTile(
                   leading: const CircleAvatar(child: Icon(Icons.person)),
-                  title: Text(trabajador.nombre),
-                  subtitle: trabajador.telefono != null
-                      ? Text(trabajador.telefono!)
-                      : null,
-                  onTap: () => Navigator.pop(ctx, trabajador.nombre),
+                  title: Text(worker.name),
+                  subtitle: worker.phone != null ? Text(worker.phone!) : null,
+                  onTap: () => Navigator.pop(ctx, worker.name),
                 );
               },
             ),
@@ -201,23 +222,23 @@ class _JornalerosScreenState extends State<JornalerosScreen>
         ),
       );
 
-      if (nombreSeleccionado != null) {
+      if (selectedWorkerName != null) {
         final now = DateTime.now();
-        final inicioSemana = now.subtract(Duration(days: now.weekday - 1));
-        final finSemana = inicioSemana.add(const Duration(days: 6));
+        final weekStart = now.subtract(Duration(days: now.weekday - 1));
+        final weekEnd = weekStart.add(const Duration(days: 6));
 
-        final registros = provider.getRegistrosPorTrabajador(
-          nombreSeleccionado,
-          fechaInicio: inicioSemana,
-          fechaFin: finSemana,
+        final records = provider.getRecordsByWorker(
+          selectedWorkerName,
+          startDate: weekStart,
+          endDate: weekEnd,
         );
 
-        if (registros.isEmpty) {
+        if (records.isEmpty) {
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text(
-                  'No hay registros para $nombreSeleccionado esta semana',
+                  'No hay registros para $selectedWorkerName esta semana',
                 ),
               ),
             );
@@ -226,11 +247,11 @@ class _JornalerosScreenState extends State<JornalerosScreen>
         }
 
         try {
-          await PdfService.generatePagoReport(
-            title: 'Reporte de Pago - $nombreSeleccionado',
-            registros: registros,
-            startDate: inicioSemana,
-            endDate: finSemana,
+          await PdfService.generateWorkerPaymentReport(
+            title: 'Reporte de Pago - $selectedWorkerName',
+            records: records,
+            startDate: weekStart,
+            endDate: weekEnd,
           );
         } catch (e) {
           if (mounted) {
@@ -244,19 +265,19 @@ class _JornalerosScreenState extends State<JornalerosScreen>
   }
 }
 
-class _TrabajadoresTab extends StatelessWidget {
-  const _TrabajadoresTab();
+class _WorkersTab extends StatelessWidget {
+  const _WorkersTab();
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<JornalerosProvider>(
+    return Consumer<WorkersProvider>(
       builder: (context, provider, child) {
         return Column(
           children: [
             Padding(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
               child: ElevatedButton.icon(
-                onPressed: () => _showAgregarTrabajadorDialog(context),
+                onPressed: () => _showAddWorkerDialog(context),
                 icon: const Icon(Icons.person_add),
                 label: const Text('Agregar Trabajador'),
                 style: ElevatedButton.styleFrom(
@@ -265,7 +286,7 @@ class _TrabajadoresTab extends StatelessWidget {
               ),
             ),
             Expanded(
-              child: provider.trabajadores.isEmpty
+              child: provider.workers.isEmpty
                   ? Center(
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
@@ -280,20 +301,6 @@ class _TrabajadoresTab extends StatelessWidget {
                             'No hay trabajadores registrados',
                             style: TextStyle(fontSize: 16, color: Colors.grey),
                           ),
-                          const SizedBox(height: 8),
-                          if (provider.userId == null)
-                            const Text(
-                              '⚠️ Usuario no autenticado',
-                              style: TextStyle(fontSize: 12, color: Colors.red),
-                            )
-                          else
-                            Text(
-                              'UserID: ${provider.userId?.substring(0, 8)}...',
-                              style: const TextStyle(
-                                fontSize: 10,
-                                color: Colors.grey,
-                              ),
-                            ),
                           if (provider.error != null) ...[
                             const SizedBox(height: 8),
                             Text(
@@ -308,7 +315,7 @@ class _TrabajadoresTab extends StatelessWidget {
                           const SizedBox(height: 16),
                           ElevatedButton(
                             onPressed: () {
-                              provider.loadTrabajadores();
+                              provider.loadWorkers();
                               ScaffoldMessenger.of(context).showSnackBar(
                                 const SnackBar(content: Text('Recargando...')),
                               );
@@ -319,39 +326,47 @@ class _TrabajadoresTab extends StatelessWidget {
                       ),
                     )
                   : ListView.builder(
-                      itemCount: provider.trabajadores.length,
+                      padding: const EdgeInsets.fromLTRB(10, 4, 10, 16),
+                      itemCount: provider.workers.length,
                       itemBuilder: (context, index) {
-                        final trabajador = provider.trabajadores[index];
-                        return ListTile(
-                          leading: CircleAvatar(
-                            child: Text(trabajador.nombre[0]),
-                          ),
-                          title: Text(trabajador.nombre),
-                          subtitle: trabajador.telefono != null
-                              ? Text(trabajador.telefono!)
-                              : const Text('Sin teléfono'),
-                          trailing: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              IconButton(
-                                icon: const Icon(Icons.edit),
-                                onPressed: () => _showEditarTrabajadorDialog(
-                                  context,
-                                  trabajador,
+                        final worker = provider.workers[index];
+                        return Card(
+                          margin: const EdgeInsets.only(bottom: 10),
+                          child: ListTile(
+                            leading: CircleAvatar(
+                              backgroundColor: AppPalette.caramel.withValues(
+                                alpha: 0.25,
+                              ),
+                              child: Text(
+                                worker.name[0].toUpperCase(),
+                                style: const TextStyle(
+                                  color: AppPalette.espresso,
+                                  fontWeight: FontWeight.w800,
                                 ),
                               ),
-                              IconButton(
-                                icon: const Icon(
-                                  Icons.delete,
-                                  color: Colors.red,
+                            ),
+                            title: Text(worker.name),
+                            subtitle: worker.phone != null
+                                ? Text(worker.phone!)
+                                : const Text('Sin teléfono'),
+                            trailing: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                IconButton(
+                                  icon: const Icon(Icons.edit_outlined),
+                                  onPressed: () =>
+                                      _showEditWorkerDialog(context, worker),
                                 ),
-                                onPressed: () => _confirmarEliminar(
-                                  context,
-                                  provider,
-                                  trabajador,
+                                IconButton(
+                                  icon: const Icon(
+                                    Icons.delete_outline,
+                                    color: Colors.red,
+                                  ),
+                                  onPressed: () =>
+                                      _confirmDelete(context, provider, worker),
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
                         );
                       },
@@ -363,9 +378,9 @@ class _TrabajadoresTab extends StatelessWidget {
     );
   }
 
-  void _showAgregarTrabajadorDialog(BuildContext context) {
-    final nombreController = TextEditingController();
-    final telefonoController = TextEditingController();
+  void _showAddWorkerDialog(BuildContext context) {
+    final nameController = TextEditingController();
+    final phoneController = TextEditingController();
 
     showDialog(
       context: context,
@@ -375,7 +390,7 @@ class _TrabajadoresTab extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             TextField(
-              controller: nombreController,
+              controller: nameController,
               decoration: const InputDecoration(
                 labelText: 'Nombre *',
                 border: OutlineInputBorder(),
@@ -386,7 +401,7 @@ class _TrabajadoresTab extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             TextField(
-              controller: telefonoController,
+              controller: phoneController,
               decoration: const InputDecoration(
                 labelText: 'Teléfono (opcional)',
                 border: OutlineInputBorder(),
@@ -403,31 +418,33 @@ class _TrabajadoresTab extends StatelessWidget {
           ),
           ElevatedButton(
             onPressed: () async {
-              if (nombreController.text.trim().isNotEmpty) {
-                final provider = context.read<JornalerosProvider>();
+              if (nameController.text.trim().isNotEmpty) {
+                final provider = context.read<WorkersProvider>();
                 final userId = provider.userId;
 
                 if (userId == null) {
                   Navigator.pop(dialogContext);
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
-                      content: Text('Error: Usuario no autenticado'),
+                      content: Text('Error: usuario no autenticado'),
                     ),
                   );
                   return;
                 }
 
-                await provider.addTrabajador(
-                  Trabajador(
+                await provider.addWorker(
+                  Worker(
                     userId: userId,
-                    nombre: nombreController.text.trim(),
-                    telefono: telefonoController.text.trim().isEmpty
+                    name: nameController.text.trim(),
+                    phone: phoneController.text.trim().isEmpty
                         ? null
-                        : telefonoController.text.trim(),
+                        : phoneController.text.trim(),
                   ),
                 );
 
+                if (!dialogContext.mounted) return;
                 Navigator.pop(dialogContext);
+                if (!context.mounted) return;
 
                 if (provider.error != null) {
                   ScaffoldMessenger.of(
@@ -440,21 +457,16 @@ class _TrabajadoresTab extends StatelessWidget {
                 }
               }
             },
-            child: const Text('Agregar'),
+            child: const Text('Guardar'),
           ),
         ],
       ),
     );
   }
 
-  void _showEditarTrabajadorDialog(
-    BuildContext context,
-    Trabajador trabajador,
-  ) {
-    final nombreController = TextEditingController(text: trabajador.nombre);
-    final telefonoController = TextEditingController(
-      text: trabajador.telefono ?? '',
-    );
+  void _showEditWorkerDialog(BuildContext context, Worker worker) {
+    final nameController = TextEditingController(text: worker.name);
+    final phoneController = TextEditingController(text: worker.phone ?? '');
 
     showDialog(
       context: context,
@@ -464,7 +476,7 @@ class _TrabajadoresTab extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             TextField(
-              controller: nombreController,
+              controller: nameController,
               decoration: const InputDecoration(
                 labelText: 'Nombre *',
                 border: OutlineInputBorder(),
@@ -473,7 +485,7 @@ class _TrabajadoresTab extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             TextField(
-              controller: telefonoController,
+              controller: phoneController,
               decoration: const InputDecoration(
                 labelText: 'Teléfono (opcional)',
                 border: OutlineInputBorder(),
@@ -489,14 +501,14 @@ class _TrabajadoresTab extends StatelessWidget {
           ),
           ElevatedButton(
             onPressed: () {
-              if (nombreController.text.trim().isNotEmpty) {
-                final provider = context.read<JornalerosProvider>();
-                provider.updateTrabajador(
-                  trabajador.copyWith(
-                    nombre: nombreController.text.trim(),
-                    telefono: telefonoController.text.trim().isEmpty
+              if (nameController.text.trim().isNotEmpty) {
+                final provider = context.read<WorkersProvider>();
+                provider.updateWorker(
+                  worker.copyWith(
+                    name: nameController.text.trim(),
+                    phone: phoneController.text.trim().isEmpty
                         ? null
-                        : telefonoController.text.trim(),
+                        : phoneController.text.trim(),
                   ),
                 );
                 Navigator.pop(dialogContext);
@@ -512,16 +524,16 @@ class _TrabajadoresTab extends StatelessWidget {
     );
   }
 
-  void _confirmarEliminar(
+  void _confirmDelete(
     BuildContext context,
-    JornalerosProvider provider,
-    Trabajador trabajador,
+    WorkersProvider provider,
+    Worker worker,
   ) {
     showDialog(
       context: context,
       builder: (dialogContext) => AlertDialog(
         title: const Text('Eliminar Trabajador'),
-        content: Text('¿Está seguro de eliminar a ${trabajador.nombre}?'),
+        content: Text('¿Está seguro de eliminar a ${worker.name}?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext),
@@ -529,7 +541,7 @@ class _TrabajadoresTab extends StatelessWidget {
           ),
           ElevatedButton(
             onPressed: () {
-              provider.deleteTrabajador(trabajador);
+              provider.deleteWorker(worker);
               Navigator.pop(dialogContext);
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(content: Text('Trabajador eliminado')),
@@ -544,32 +556,32 @@ class _TrabajadoresTab extends StatelessWidget {
   }
 }
 
-class _RegistrarKilosTab extends StatefulWidget {
-  const _RegistrarKilosTab();
+class _RegisterKilogramsTab extends StatefulWidget {
+  const _RegisterKilogramsTab();
 
   @override
-  State<_RegistrarKilosTab> createState() => _RegistrarKilosTabState();
+  State<_RegisterKilogramsTab> createState() => _RegisterKilogramsTabState();
 }
 
-class _RegistrarKilosTabState extends State<_RegistrarKilosTab> {
+class _RegisterKilogramsTabState extends State<_RegisterKilogramsTab> {
   final _formKey = GlobalKey<FormState>();
-  final _kilosController = TextEditingController();
-  final _precioController = TextEditingController();
+  final _kilogramsController = TextEditingController();
+  final _priceController = TextEditingController();
   DateTime _selectedDate = DateTime.now();
-  String? _trabajadorSeleccionado;
-  String? _fincaSeleccionada;
+  String? _selectedWorker;
+  String? _selectedFarm;
 
   @override
   void dispose() {
-    _kilosController.dispose();
-    _precioController.dispose();
+    _kilogramsController.dispose();
+    _priceController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final jurnaleroProvider = context.watch<JornalerosProvider>();
-    final registroProvider = context.watch<RegistroProvider>();
+    final workersProvider = context.watch<WorkersProvider>();
+    final recordsProvider = context.watch<RecordsProvider>();
 
     return Form(
       key: _formKey,
@@ -577,17 +589,16 @@ class _RegistrarKilosTabState extends State<_RegistrarKilosTab> {
         padding: const EdgeInsets.all(16),
         children: [
           DropdownButtonFormField<String>(
-            value: _trabajadorSeleccionado,
+            initialValue: _selectedWorker,
             decoration: const InputDecoration(
               labelText: 'Trabajador *',
               border: OutlineInputBorder(),
               prefixIcon: Icon(Icons.person),
             ),
-            items: jurnaleroProvider.trabajadores.map((t) {
-              return DropdownMenuItem(value: t.nombre, child: Text(t.nombre));
+            items: workersProvider.workers.map((t) {
+              return DropdownMenuItem(value: t.name, child: Text(t.name));
             }).toList(),
-            onChanged: (value) =>
-                setState(() => _trabajadorSeleccionado = value),
+            onChanged: (value) => setState(() => _selectedWorker = value),
             validator: (value) =>
                 value == null ? 'Seleccione un trabajador' : null,
           ),
@@ -605,33 +616,35 @@ class _RegistrarKilosTabState extends State<_RegistrarKilosTab> {
           ),
           const SizedBox(height: 16),
           DropdownButtonFormField<String>(
-            value: _fincaSeleccionada,
+            initialValue: _selectedFarm,
             decoration: const InputDecoration(
-              labelText: 'Finca *',
+              labelText: 'Farm *',
               border: OutlineInputBorder(),
               prefixIcon: Icon(Icons.landscape),
             ),
-            items: registroProvider.fincas.map((f) {
+            items: recordsProvider.farmNames.map((f) {
               return DropdownMenuItem(value: f, child: Text(f.toUpperCase()));
             }).toList(),
-            onChanged: (value) => setState(() => _fincaSeleccionada = value),
+            onChanged: (value) => setState(() => _selectedFarm = value),
             validator: (value) => value == null ? 'Seleccione una finca' : null,
           ),
           const SizedBox(height: 16),
           TextFormField(
-            controller: _kilosController,
+            controller: _kilogramsController,
             decoration: const InputDecoration(
               labelText: 'Kilos recolectados *',
               border: OutlineInputBorder(),
               prefixIcon: Icon(Icons.scale),
-              hintText: 'Cantidad de kilos',
+              hintText: 'Cantidad de kilogramos',
             ),
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
             inputFormatters: [
               FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
             ],
             validator: (value) {
-              if (value == null || value.isEmpty) return 'Ingrese los kilos';
+              if (value == null || value.isEmpty) {
+                return 'Ingrese los kilogramos';
+              }
               if (double.tryParse(value) == null || double.parse(value) <= 0) {
                 return 'Ingrese un valor válido';
               }
@@ -640,7 +653,7 @@ class _RegistrarKilosTabState extends State<_RegistrarKilosTab> {
           ),
           const SizedBox(height: 16),
           TextFormField(
-            controller: _precioController,
+            controller: _priceController,
             decoration: const InputDecoration(
               labelText: 'Precio por kilo *',
               border: OutlineInputBorder(),
@@ -652,7 +665,9 @@ class _RegistrarKilosTabState extends State<_RegistrarKilosTab> {
               FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
             ],
             validator: (value) {
-              if (value == null || value.isEmpty) return 'Ingrese el precio';
+              if (value == null || value.isEmpty) {
+                return 'Ingrese el precio';
+              }
               if (double.tryParse(value) == null || double.parse(value) <= 0) {
                 return 'Ingrese un valor válido';
               }
@@ -670,8 +685,8 @@ class _RegistrarKilosTabState extends State<_RegistrarKilosTab> {
               foregroundColor: Colors.white,
             ),
           ),
-          if (jurnaleroProvider.trabajadores.isEmpty ||
-              registroProvider.fincas.isEmpty) ...[
+          if (workersProvider.workers.isEmpty ||
+              recordsProvider.farmNames.isEmpty) ...[
             const SizedBox(height: 16),
             Card(
               color: Colors.amber[50],
@@ -691,11 +706,11 @@ class _RegistrarKilosTabState extends State<_RegistrarKilosTab> {
                       ],
                     ),
                     const SizedBox(height: 8),
-                    if (jurnaleroProvider.trabajadores.isEmpty)
+                    if (workersProvider.workers.isEmpty)
                       const Text(
-                        '• Debe agregar trabajadores en la pestaña "Trabajadores"',
+                        '• Debe agregar trabajadores en la pestaña "Workers"',
                       ),
-                    if (registroProvider.fincas.isEmpty)
+                    if (recordsProvider.farmNames.isEmpty)
                       const Text(
                         '• Debe tener fincas registradas en la app principal',
                       ),
@@ -723,34 +738,34 @@ class _RegistrarKilosTabState extends State<_RegistrarKilosTab> {
 
   void _submit() {
     if (_formKey.currentState!.validate()) {
-      final kilos = double.parse(_kilosController.text);
-      final precioKilo = double.parse(_precioController.text);
-      final total = kilos * precioKilo;
+      final kilograms = double.parse(_kilogramsController.text);
+      final pricePerKg = double.parse(_priceController.text);
+      final total = kilograms * pricePerKg;
 
-      final jurnaleroProvider = context.read<JornalerosProvider>();
-      final trabajador = jurnaleroProvider.trabajadores.firstWhere(
-        (t) => t.nombre == _trabajadorSeleccionado,
+      final workersProvider = context.read<WorkersProvider>();
+      final worker = workersProvider.workers.firstWhere(
+        (t) => t.name == _selectedWorker,
       );
 
-      final registro = RegistroRecolector(
+      final record = WorkerRecord(
         userId: '',
-        trabajadorId: trabajador.id ?? 0,
-        nombreTrabajador: _trabajadorSeleccionado!,
-        fecha: _selectedDate,
-        kilos: kilos,
-        precioKilo: precioKilo,
+        workerId: worker.firebaseId ?? '',
+        workerName: _selectedWorker!,
+        date: _selectedDate,
+        kilograms: kilograms,
+        pricePerKg: pricePerKg,
         total: total,
-        fibra: _fincaSeleccionada!,
+        farmName: _selectedFarm!,
       );
 
-      jurnaleroProvider.addRegistro(registro);
+      workersProvider.addRecord(record);
 
-      _kilosController.clear();
-      _precioController.clear();
+      _kilogramsController.clear();
+      _priceController.clear();
       setState(() {
         _selectedDate = DateTime.now();
-        _trabajadorSeleccionado = null;
-        _fincaSeleccionada = null;
+        _selectedWorker = null;
+        _selectedFarm = null;
       });
 
       ScaffoldMessenger.of(context).showSnackBar(
@@ -760,18 +775,18 @@ class _RegistrarKilosTabState extends State<_RegistrarKilosTab> {
   }
 }
 
-class _ListaRegistrosTab extends StatelessWidget {
-  const _ListaRegistrosTab();
+class _RecordsListTab extends StatelessWidget {
+  const _RecordsListTab();
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<JornalerosProvider>(
+    return Consumer<WorkersProvider>(
       builder: (context, provider, child) {
         if (provider.isLoading) {
           return const Center(child: CircularProgressIndicator());
         }
 
-        if (provider.registros.isEmpty) {
+        if (provider.records.isEmpty) {
           return const Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -779,7 +794,7 @@ class _ListaRegistrosTab extends StatelessWidget {
                 Icon(Icons.receipt_long, size: 64, color: Colors.grey),
                 SizedBox(height: 16),
                 Text(
-                  'No hay registros de kilos',
+                  'No hay registros de kilogramos',
                   style: TextStyle(fontSize: 16, color: Colors.grey),
                 ),
               ],
@@ -788,38 +803,37 @@ class _ListaRegistrosTab extends StatelessWidget {
         }
 
         return ListView.builder(
-          itemCount: provider.registros.length,
+          padding: const EdgeInsets.fromLTRB(10, 8, 10, 16),
+          itemCount: provider.records.length,
           itemBuilder: (context, index) {
-            final registro = provider.registros[index];
+            final record = provider.records[index];
             return Card(
-              margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+              margin: const EdgeInsets.only(bottom: 8),
               child: ListTile(
                 leading: CircleAvatar(
-                  backgroundColor: registro.estaPagado
-                      ? Colors.green
-                      : Colors.orange,
+                  backgroundColor: record.isPaid ? Colors.green : Colors.orange,
                   child: Icon(
-                    registro.estaPagado ? Icons.check : Icons.pending,
+                    record.isPaid ? Icons.check : Icons.pending,
                     color: Colors.white,
                   ),
                 ),
-                title: Text(registro.nombreTrabajador),
+                title: Text(record.workerName),
                 subtitle: Text(
-                  '${registro.kilos.toStringAsFixed(1)} kg - ${DateFormat('dd/MM/yyyy').format(registro.fecha)}\n${registro.fibra}',
+                  '${record.kilograms.toStringAsFixed(1)} kg - ${DateFormat('dd/MM/yyyy').format(record.date)}\n${record.farmName}',
                 ),
                 isThreeLine: true,
                 trailing: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
-                      '\$${registro.total.toStringAsFixed(0)}',
+                      '\$${record.total.toStringAsFixed(0)}',
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
                         color: Colors.brown[900],
                         fontSize: 16,
                       ),
                     ),
-                    if (!registro.estaPagado)
+                    if (!record.isPaid)
                       IconButton(
                         icon: const Icon(
                           Icons.check_circle,
@@ -827,7 +841,7 @@ class _ListaRegistrosTab extends StatelessWidget {
                         ),
                         tooltip: 'Marcar como pagado',
                         onPressed: () =>
-                            _confirmarPago(context, provider, registro),
+                            _confirmPayment(context, provider, record),
                       ),
                   ],
                 ),
@@ -839,19 +853,19 @@ class _ListaRegistrosTab extends StatelessWidget {
     );
   }
 
-  void _confirmarPago(
+  void _confirmPayment(
     BuildContext context,
-    JornalerosProvider provider,
-    RegistroRecolector registro,
+    WorkersProvider provider,
+    WorkerRecord record,
   ) {
     showDialog(
       context: context,
       builder: (dialogContext) => AlertDialog(
         title: const Text('Confirmar Pago'),
         content: Text(
-          '¿Marcar como pagado a ${registro.nombreTrabajador}?\n\n'
-          'Kilos: ${registro.kilos.toStringAsFixed(1)}\n'
-          'Total: \$${registro.total.toStringAsFixed(0)}',
+          '¿Marcar como pagado a ${record.workerName}?\n\n'
+          'Kilos: ${record.kilograms.toStringAsFixed(1)}\n'
+          'Total: \$${record.total.toStringAsFixed(0)}',
         ),
         actions: [
           TextButton(
@@ -860,7 +874,7 @@ class _ListaRegistrosTab extends StatelessWidget {
           ),
           ElevatedButton(
             onPressed: () {
-              provider.marcarComoPagado(registro);
+              provider.markAsPaid(record);
               Navigator.pop(dialogContext);
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(content: Text('Pago marcado como realizado')),

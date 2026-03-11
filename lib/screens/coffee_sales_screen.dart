@@ -2,63 +2,64 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
-import '../models/registro_finca.dart';
-import '../providers/registro_provider.dart';
+import '../models/coffee_record.dart';
+import '../providers/records_provider.dart';
 import '../services/pdf_service.dart';
+import '../theme/app_theme.dart';
 
-class VentaCafeScreen extends StatefulWidget {
-  const VentaCafeScreen({super.key});
+class CoffeeSalesScreen extends StatefulWidget {
+  const CoffeeSalesScreen({super.key});
 
   @override
-  State<VentaCafeScreen> createState() => _VentaCafeScreenState();
+  State<CoffeeSalesScreen> createState() => _CoffeeSalesScreenState();
 }
 
-class _VentaCafeScreenState extends State<VentaCafeScreen>
+class _CoffeeSalesScreenState extends State<CoffeeSalesScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
   final _formKey = GlobalKey<FormState>();
-  final _fechaController = TextEditingController();
-  final _kilosSecoController = TextEditingController();
-  final _precioController = TextEditingController();
+  final _dateController = TextEditingController();
+  final _dryCoffeeKgController = TextEditingController();
+  final _priceController = TextEditingController();
 
   DateTime _selectedDate = DateTime.now();
   String? _lastUserId;
-  List<String> _fincasList = [];
-  String? _selectedFinca;
-  double _totalCalculado = 0;
+  List<String> _farmsList = [];
+  String? _selectedFarm;
+  double _calculatedTotal = 0;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
-    _fechaController.text = DateFormat('yyyy-MM-dd').format(_selectedDate);
-    _kilosSecoController.addListener(_calcularTotal);
-    _precioController.addListener(_calcularTotal);
+    _dateController.text = DateFormat('yyyy-MM-dd').format(_selectedDate);
+    _dryCoffeeKgController.addListener(_calculateTotal);
+    _priceController.addListener(_calculateTotal);
   }
 
-  void _calcularTotal() {
-    final kilos = double.tryParse(_kilosSecoController.text) ?? 0;
-    final precio = double.tryParse(_precioController.text) ?? 0;
+  void _calculateTotal() {
+    final kilograms = double.tryParse(_dryCoffeeKgController.text) ?? 0;
+    final price = double.tryParse(_priceController.text) ?? 0;
     setState(() {
-      _totalCalculado = kilos * precio;
+      _calculatedTotal = kilograms * price;
     });
   }
 
-  void _loadFincas() {
-    final provider = context.read<RegistroProvider>();
+  void _loadFarms() {
+    final provider = context.read<RecordsProvider>();
     final userId = provider.userId ?? '';
-    final uniqueFincas = provider.fincas.toSet().toList()..sort();
+    final uniqueFarms = provider.farmNames.toSet().toList()..sort();
 
     if (_lastUserId != userId) {
       _lastUserId = userId;
       setState(() {
-        _fincasList = uniqueFincas;
+        _farmsList = uniqueFarms;
       });
     } else {
-      if (_fincasList.toSet().difference(uniqueFincas.toSet()).isNotEmpty ||
-          uniqueFincas.toSet().difference(_fincasList.toSet()).isNotEmpty) {
+      if (_farmsList.toSet().difference(uniqueFarms.toSet()).isNotEmpty ||
+          uniqueFarms.toSet().difference(_farmsList.toSet()).isNotEmpty) {
         setState(() {
-          _fincasList = uniqueFincas;
+          _farmsList = uniqueFarms;
         });
       }
     }
@@ -67,15 +68,15 @@ class _VentaCafeScreenState extends State<VentaCafeScreen>
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    _loadFincas();
+    _loadFarms();
   }
 
   @override
   void dispose() {
     _tabController.dispose();
-    _fechaController.dispose();
-    _kilosSecoController.dispose();
-    _precioController.dispose();
+    _dateController.dispose();
+    _dryCoffeeKgController.dispose();
+    _priceController.dispose();
     super.dispose();
   }
 
@@ -89,27 +90,27 @@ class _VentaCafeScreenState extends State<VentaCafeScreen>
     if (picked != null) {
       setState(() {
         _selectedDate = picked;
-        _fechaController.text = DateFormat('yyyy-MM-dd').format(picked);
+        _dateController.text = DateFormat('yyyy-MM-dd').format(picked);
       });
     }
   }
 
-  void _submit() {
+  void _saveRecord() {
     if (_formKey.currentState!.validate()) {
-      final kilosSeco = double.parse(_kilosSecoController.text);
-      final precioKilo = double.parse(_precioController.text);
-      final total = kilosSeco * precioKilo;
+      final dryCoffeeKg = double.parse(_dryCoffeeKgController.text);
+      final pricePerKg = double.parse(_priceController.text);
+      final total = dryCoffeeKg * pricePerKg;
 
-      final registro = RegistroFinca(
-        fecha: _selectedDate,
-        fibra: _selectedFinca ?? '',
-        kilosSeco: kilosSeco,
-        precioKilo: precioKilo,
+      final record = CoffeeRecord(
+        date: _selectedDate,
+        farmName: _selectedFarm ?? '',
+        dryCoffeeKg: dryCoffeeKg,
+        pricePerKg: pricePerKg,
         total: total,
       );
 
-      context.read<RegistroProvider>().addRegistro(registro);
-      _clearForm();
+      context.read<RecordsProvider>().addRecord(record);
+      _resetForm();
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Venta registrada correctamente')),
       );
@@ -119,18 +120,18 @@ class _VentaCafeScreenState extends State<VentaCafeScreen>
     }
   }
 
-  void _clearForm() {
-    _kilosSecoController.clear();
-    _precioController.clear();
+  void _resetForm() {
+    _dryCoffeeKgController.clear();
+    _priceController.clear();
     setState(() {
       _selectedDate = DateTime.now();
-      _fechaController.text = DateFormat('yyyy-MM-dd').format(_selectedDate);
-      _selectedFinca = null;
-      _totalCalculado = 0;
+      _dateController.text = DateFormat('yyyy-MM-dd').format(_selectedDate);
+      _selectedFarm = null;
+      _calculatedTotal = 0;
     });
   }
 
-  void _showPdfDialog() {
+  void _showReportDialog() {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -144,21 +145,21 @@ class _VentaCafeScreenState extends State<VentaCafeScreen>
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            _buildPdfOption(
+            _buildReportOption(
               ctx,
               icon: Icons.calendar_view_week,
               title: 'Esta Semana',
               subtitle: 'Últimos 7 días',
               color: Colors.blue,
             ),
-            _buildPdfOption(
+            _buildReportOption(
               ctx,
               icon: Icons.calendar_month,
               title: 'Este Mes',
               subtitle: DateFormat('MMMM yyyy', 'es').format(DateTime.now()),
               color: Colors.green,
             ),
-            _buildPdfOption(
+            _buildReportOption(
               ctx,
               icon: Icons.history,
               title: 'Todo el Historial',
@@ -177,7 +178,7 @@ class _VentaCafeScreenState extends State<VentaCafeScreen>
     );
   }
 
-  Widget _buildPdfOption(
+  Widget _buildReportOption(
     BuildContext ctx, {
     required IconData icon,
     required String title,
@@ -190,7 +191,7 @@ class _VentaCafeScreenState extends State<VentaCafeScreen>
         leading: Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: color.withOpacity(0.1),
+            color: color.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(8),
           ),
           child: Icon(icon, color: color),
@@ -223,10 +224,10 @@ class _VentaCafeScreenState extends State<VentaCafeScreen>
     DateTime end,
     String title,
   ) async {
-    final provider = context.read<RegistroProvider>();
-    final allRecords = provider.registros;
+    final provider = context.read<RecordsProvider>();
+    final allRecords = provider.records;
     final filtered = allRecords.where((reg) {
-      final date = reg.fecha;
+      final date = reg.date;
       return date.isAfter(start.subtract(const Duration(days: 1))) &&
           date.isBefore(end.add(const Duration(days: 1)));
     }).toList();
@@ -243,7 +244,7 @@ class _VentaCafeScreenState extends State<VentaCafeScreen>
     try {
       await PdfService.generateReport(
         title: title,
-        registros: filtered,
+        records: filtered,
         startDate: start,
         endDate: end,
       );
@@ -260,35 +261,51 @@ class _VentaCafeScreenState extends State<VentaCafeScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Ventanas de café'),
-        backgroundColor: Colors.brown[900],
-        foregroundColor: Colors.white,
-        elevation: 0,
+        title: const Text('Ventas de Café'),
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [AppPalette.espresso, AppPalette.cocoa],
+            ),
+            borderRadius: BorderRadius.vertical(bottom: Radius.circular(24)),
+          ),
+        ),
         bottom: TabBar(
           controller: _tabController,
-          indicatorColor: Colors.white,
-          indicatorWeight: 3,
-          labelColor:Colors.white,
-          unselectedLabelColor:Colors.white70,
+          indicatorColor: AppPalette.caramel,
+          indicatorWeight: 2.8,
+          labelColor: Colors.white,
+          unselectedLabelColor: Colors.white.withValues(alpha: 0.7),
           tabs: const [
-            Tab(icon: Icon(Icons.add_circle_outline), text: 'registrar'),
-            Tab(icon: Icon(Icons.receipt_long), text: 'listado'),
+            Tab(icon: Icon(Icons.add_circle_outline), text: 'Registrar'),
+            Tab(icon: Icon(Icons.receipt_long), text: 'Listado'),
           ],
         ),
         actions: [
           IconButton(
             icon: const Icon(Icons.picture_as_pdf),
-            tooltip: 'exportar pdf',
-            onPressed: _showPdfDialog,
+            tooltip: 'Exportar PDF',
+            onPressed: _showReportDialog,
           ),
         ],
       ),
-      body: TabBarView(
-        controller: _tabController,
-        children: [
-          _fincasList.isEmpty ? _buildNoFincasMessage() : _buildForm(),
-          _buildListView(),
-        ],
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [Color(0xFFF4EEE7), Color(0xFFF1E8DF)],
+          ),
+        ),
+        child: TabBarView(
+          controller: _tabController,
+          children: [
+            _farmsList.isEmpty ? _buildNoFarmsMessage() : _buildForm(),
+            _buildListView(),
+          ],
+        ),
       ),
     );
   }
@@ -298,6 +315,8 @@ class _VentaCafeScreenState extends State<VentaCafeScreen>
       symbol: '\$',
       decimalDigits: 0,
     );
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isNarrow = screenWidth < 380;
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
@@ -319,7 +338,7 @@ class _VentaCafeScreenState extends State<VentaCafeScreen>
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
+                      color: Colors.white.withValues(alpha: 0.2),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: const Icon(
@@ -353,7 +372,7 @@ class _VentaCafeScreenState extends State<VentaCafeScreen>
             ),
             const SizedBox(height: 24),
             _buildInputField(
-              controller: _fechaController,
+              controller: _dateController,
               label: 'Fecha de la venta',
               icon: Icons.calendar_today,
               onTap: () => _selectDate(context),
@@ -368,49 +387,86 @@ class _VentaCafeScreenState extends State<VentaCafeScreen>
             const SizedBox(height: 16),
             _buildDropdownField(),
             const SizedBox(height: 16),
-            Row(
-              children: [
-                Expanded(
-                  child: _buildInputField(
-                    controller: _kilosSecoController,
-                    label: 'Kilos Secos',
-                    icon: Icons.scale,
-                    suffix: 'kg',
-                    keyboardType: TextInputType.number,
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Ingrese kilos';
-                      }
-                      if (double.tryParse(value) == null ||
-                          double.parse(value) <= 0) {
-                        return 'Valor inválido';
-                      }
-                      return null;
-                    },
+            if (isNarrow) ...[
+              _buildInputField(
+                controller: _dryCoffeeKgController,
+                label: 'Kilos Secos',
+                icon: Icons.scale,
+                suffix: 'kg',
+                keyboardType: TextInputType.number,
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Ingrese kilos';
+                  }
+                  if (double.tryParse(value) == null ||
+                      double.parse(value) <= 0) {
+                    return 'Valor inválido';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 12),
+              _buildInputField(
+                controller: _priceController,
+                label: 'Precio/kg',
+                icon: Icons.attach_money,
+                prefix: '\$',
+                keyboardType: TextInputType.number,
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Ingrese precio';
+                  }
+                  if (double.tryParse(value) == null ||
+                      double.parse(value) <= 0) {
+                    return 'Valor inválido';
+                  }
+                  return null;
+                },
+              ),
+            ] else
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildInputField(
+                      controller: _dryCoffeeKgController,
+                      label: 'Kilos Secos',
+                      icon: Icons.scale,
+                      suffix: 'kg',
+                      keyboardType: TextInputType.number,
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Ingrese kilos';
+                        }
+                        if (double.tryParse(value) == null ||
+                            double.parse(value) <= 0) {
+                          return 'Valor inválido';
+                        }
+                        return null;
+                      },
+                    ),
                   ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: _buildInputField(
-                    controller: _precioController,
-                    label: 'Precio/kg',
-                    icon: Icons.attach_money,
-                    prefix: '\$',
-                    keyboardType: TextInputType.number,
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Ingrese precio';
-                      }
-                      if (double.tryParse(value) == null ||
-                          double.parse(value) <= 0) {
-                        return 'Valor inválido';
-                      }
-                      return null;
-                    },
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _buildInputField(
+                      controller: _priceController,
+                      label: 'Precio/kg',
+                      icon: Icons.attach_money,
+                      prefix: '\$',
+                      keyboardType: TextInputType.number,
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Ingrese precio';
+                        }
+                        if (double.tryParse(value) == null ||
+                            double.parse(value) <= 0) {
+                          return 'Valor inválido';
+                        }
+                        return null;
+                      },
+                    ),
                   ),
-                ),
-              ],
-            ),
+                ],
+              ),
             const SizedBox(height: 24),
             Container(
               padding: const EdgeInsets.all(20),
@@ -438,9 +494,9 @@ class _VentaCafeScreenState extends State<VentaCafeScreen>
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    currencyFormat.format(_totalCalculado),
+                    currencyFormat.format(_calculatedTotal),
                     style: TextStyle(
-                      fontSize: 36,
+                      fontSize: isNarrow ? 30 : 36,
                       fontWeight: FontWeight.bold,
                       color: Colors.green.shade700,
                     ),
@@ -449,27 +505,36 @@ class _VentaCafeScreenState extends State<VentaCafeScreen>
               ),
             ),
             const SizedBox(height: 24),
-            ElevatedButton(
-              onPressed: _submit,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.brown[900],
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                elevation: 2,
-              ),
-              child: const Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.save),
-                  SizedBox(width: 8),
-                  Text(
-                    'Guardar Venta',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: _saveRecord,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.brown[900],
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
                   ),
-                ],
+                  elevation: 2,
+                ),
+                child: const Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.save),
+                    SizedBox(width: 8),
+                    Flexible(
+                      child: Text(
+                        'Guardar Venta',
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
             const SizedBox(height: 40),
@@ -521,9 +586,9 @@ class _VentaCafeScreenState extends State<VentaCafeScreen>
 
   Widget _buildDropdownField() {
     return DropdownButtonFormField<String>(
-      value: _selectedFinca,
+      initialValue: _selectedFarm,
       decoration: InputDecoration(
-        labelText: 'Finca',
+        labelText: 'Farm',
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
@@ -539,7 +604,7 @@ class _VentaCafeScreenState extends State<VentaCafeScreen>
       ),
       isExpanded: true,
       hint: const Text('Seleccionar finca'),
-      items: _fincasList.map((f) {
+      items: _farmsList.map((f) {
         return DropdownMenuItem<String>(
           value: f,
           child: Text(
@@ -550,7 +615,7 @@ class _VentaCafeScreenState extends State<VentaCafeScreen>
       }).toList(),
       onChanged: (value) {
         setState(() {
-          _selectedFinca = value;
+          _selectedFarm = value;
         });
       },
       validator: (value) {
@@ -563,11 +628,11 @@ class _VentaCafeScreenState extends State<VentaCafeScreen>
   }
 
   Widget _buildListView() {
-    return Consumer<RegistroProvider>(
+    return Consumer<RecordsProvider>(
       builder: (context, provider, child) {
-        final registros = provider.registros;
+        final records = provider.records;
 
-        if (registros.isEmpty) {
+        if (records.isEmpty) {
           return _buildEmptyState();
         }
 
@@ -575,10 +640,7 @@ class _VentaCafeScreenState extends State<VentaCafeScreen>
           symbol: '\$',
           decimalDigits: 0,
         );
-        final totalVentas = registros.fold<double>(
-          0,
-          (sum, r) => sum + r.total,
-        );
+        final totalSales = records.fold<double>(0, (sum, r) => sum + r.total);
 
         return Column(
           children: [
@@ -586,53 +648,62 @@ class _VentaCafeScreenState extends State<VentaCafeScreen>
               width: double.infinity,
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(color: Colors.brown[900]),
-              child: Column(
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final isNarrow = constraints.maxWidth < 360;
+                  final summary = Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            '${registros.length} ventas registradas',
-                            style: const TextStyle(
-                              color: Colors.white70,
-                              fontSize: 12,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            currencyFormat.format(totalVentas),
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 24,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ],
+                      Text(
+                        '${records.length} ventas registradas',
+                        style: const TextStyle(
+                          color: Colors.white70,
+                          fontSize: 12,
+                        ),
                       ),
-                      ElevatedButton.icon(
-                        onPressed: _showPdfDialog,
-                        icon: const Icon(Icons.picture_as_pdf, size: 18),
-                        label: const Text('PDF'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.white,
-                          foregroundColor: Colors.brown[900],
+                      const SizedBox(height: 4),
+                      Text(
+                        currencyFormat.format(totalSales),
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: isNarrow ? 20 : 24,
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
                     ],
-                  ),
-                ],
+                  );
+
+                  final button = ElevatedButton.icon(
+                    onPressed: _showReportDialog,
+                    icon: const Icon(Icons.picture_as_pdf, size: 18),
+                    label: const Text('PDF'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.white,
+                      foregroundColor: Colors.brown[900],
+                    ),
+                  );
+
+                  if (isNarrow) {
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [summary, const SizedBox(height: 10), button],
+                    );
+                  }
+
+                  return Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [summary, button],
+                  );
+                },
               ),
             ),
             Expanded(
               child: ListView.builder(
                 padding: const EdgeInsets.only(bottom: 80, top: 8),
-                itemCount: registros.length,
+                itemCount: records.length,
                 itemBuilder: (context, index) {
-                  final reg = registros[index];
-                  return _buildVentaCard(reg);
+                  final reg = records[index];
+                  return _buildSaleCard(reg);
                 },
               ),
             ),
@@ -696,7 +767,7 @@ class _VentaCafeScreenState extends State<VentaCafeScreen>
     );
   }
 
-  Widget _buildVentaCard(RegistroFinca registro) {
+  Widget _buildSaleCard(CoffeeRecord record) {
     final dateFormat = DateFormat('dd MMM yyyy', 'es');
     final currencyFormat = NumberFormat.currency(
       symbol: '\$',
@@ -704,7 +775,7 @@ class _VentaCafeScreenState extends State<VentaCafeScreen>
     );
 
     return Dismissible(
-      key: Key(registro.firebaseId ?? registro.hashCode.toString()),
+      key: Key(record.firebaseId ?? record.hashCode.toString()),
       direction: DismissDirection.endToStart,
       background: Container(
         alignment: Alignment.centerRight,
@@ -713,7 +784,7 @@ class _VentaCafeScreenState extends State<VentaCafeScreen>
         child: const Icon(Icons.delete, color: Colors.white),
       ),
       confirmDismiss: (direction) async {
-        _showDeleteConfirmation(registro);
+        _showDeleteConfirmation(record);
         return false;
       },
       child: Card(
@@ -721,7 +792,7 @@ class _VentaCafeScreenState extends State<VentaCafeScreen>
         elevation: 1,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         child: InkWell(
-          onTap: () => _showVentaDetails(registro),
+          onTap: () => _showSaleDetails(record),
           borderRadius: BorderRadius.circular(12),
           child: Padding(
             padding: const EdgeInsets.all(12),
@@ -741,7 +812,7 @@ class _VentaCafeScreenState extends State<VentaCafeScreen>
                     children: [
                       const Icon(Icons.sell, color: Colors.white, size: 20),
                       Text(
-                        '${registro.kilosSeco.toStringAsFixed(0)}kg',
+                        '${record.dryCoffeeKg.toStringAsFixed(0)}kg',
                         style: const TextStyle(
                           color: Colors.white,
                           fontSize: 10,
@@ -757,14 +828,17 @@ class _VentaCafeScreenState extends State<VentaCafeScreen>
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        registro.fibra.toUpperCase(),
+                        record.farmName.toUpperCase(),
                         style: const TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 15,
                         ),
                       ),
                       const SizedBox(height: 4),
-                      Row(
+                      Wrap(
+                        spacing: 10,
+                        runSpacing: 4,
+                        crossAxisAlignment: WrapCrossAlignment.center,
                         children: [
                           Icon(
                             Icons.calendar_today,
@@ -773,20 +847,19 @@ class _VentaCafeScreenState extends State<VentaCafeScreen>
                           ),
                           const SizedBox(width: 4),
                           Text(
-                            dateFormat.format(registro.fecha),
+                            dateFormat.format(record.date),
                             style: TextStyle(
                               fontSize: 12,
                               color: Colors.grey[600],
                             ),
                           ),
-                          const SizedBox(width: 12),
                           Icon(
                             Icons.attach_money,
                             size: 12,
                             color: Colors.grey[500],
                           ),
                           Text(
-                            currencyFormat.format(registro.precioKilo),
+                            currencyFormat.format(record.pricePerKg),
                             style: TextStyle(
                               fontSize: 12,
                               color: Colors.grey[600],
@@ -801,14 +874,14 @@ class _VentaCafeScreenState extends State<VentaCafeScreen>
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
                     Text(
-                      currencyFormat.format(registro.total),
+                      currencyFormat.format(record.total),
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 16,
                         color: Colors.green.shade700,
                       ),
                     ),
-                    if (!registro.isSynced)
+                    if (!record.isSynced)
                       Container(
                         margin: const EdgeInsets.only(top: 4),
                         padding: const EdgeInsets.symmetric(
@@ -848,7 +921,7 @@ class _VentaCafeScreenState extends State<VentaCafeScreen>
     );
   }
 
-  void _showVentaDetails(RegistroFinca registro) {
+  void _showSaleDetails(CoffeeRecord record) {
     final dateFormat = DateFormat('dd MMMM yyyy', 'es');
     final currencyFormat = NumberFormat.currency(
       symbol: '\$',
@@ -880,7 +953,10 @@ class _VentaCafeScreenState extends State<VentaCafeScreen>
               ),
             ),
             const SizedBox(height: 20),
-            Row(
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              crossAxisAlignment: WrapCrossAlignment.center,
               children: [
                 Container(
                   padding: const EdgeInsets.all(12),
@@ -907,18 +983,22 @@ class _VentaCafeScreenState extends State<VentaCafeScreen>
                         ),
                       ),
                       Text(
-                        registro.fibra.toUpperCase(),
+                        record.farmName.toUpperCase(),
                         style: TextStyle(fontSize: 14, color: Colors.grey[600]),
                       ),
                     ],
                   ),
                 ),
-                Text(
-                  currencyFormat.format(registro.total),
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.green.shade700,
+                ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 180),
+                  child: Text(
+                    currencyFormat.format(record.total),
+                    style: TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.green.shade700,
+                    ),
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
               ],
@@ -929,23 +1009,23 @@ class _VentaCafeScreenState extends State<VentaCafeScreen>
             _buildDetailItem(
               icon: Icons.calendar_today,
               label: 'Fecha',
-              value: dateFormat.format(registro.fecha),
+              value: dateFormat.format(record.date),
             ),
             _buildDetailItem(
               icon: Icons.scale,
               label: 'Kilos Secos',
-              value: '${registro.kilosSeco.toStringAsFixed(1)} kg',
+              value: '${record.dryCoffeeKg.toStringAsFixed(1)} kg',
             ),
             _buildDetailItem(
               icon: Icons.attach_money,
               label: 'Precio por kilo',
-              value: currencyFormat.format(registro.precioKilo),
+              value: currencyFormat.format(record.pricePerKg),
             ),
             _buildDetailItem(
               icon: Icons.check_circle,
               label: 'Estado',
-              value: registro.isSynced ? 'Sincronizado' : 'Pendiente',
-              valueColor: registro.isSynced ? Colors.green : Colors.orange,
+              value: record.isSynced ? 'Sincronizado' : 'Pendiente',
+              valueColor: record.isSynced ? Colors.green : Colors.orange,
             ),
             const SizedBox(height: 24),
             SizedBox(
@@ -953,7 +1033,7 @@ class _VentaCafeScreenState extends State<VentaCafeScreen>
               child: OutlinedButton.icon(
                 onPressed: () {
                   Navigator.pop(ctx);
-                  _showDeleteConfirmation(registro);
+                  _showDeleteConfirmation(record);
                 },
                 icon: const Icon(Icons.delete, color: Colors.red),
                 label: const Text(
@@ -985,14 +1065,22 @@ class _VentaCafeScreenState extends State<VentaCafeScreen>
         children: [
           Icon(icon, size: 20, color: Colors.grey[600]),
           const SizedBox(width: 12),
-          Text(label, style: TextStyle(fontSize: 14, color: Colors.grey[600])),
-          const Spacer(),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-              color: valueColor,
+          Expanded(
+            child: Text(
+              label,
+              style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+            ),
+          ),
+          Flexible(
+            child: Text(
+              value,
+              textAlign: TextAlign.right,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: valueColor,
+              ),
             ),
           ),
         ],
@@ -1000,7 +1088,7 @@ class _VentaCafeScreenState extends State<VentaCafeScreen>
     );
   }
 
-  void _showDeleteConfirmation(RegistroFinca registro) {
+  void _showDeleteConfirmation(CoffeeRecord record) {
     final currencyFormat = NumberFormat.currency(
       symbol: '\$',
       decimalDigits: 0,
@@ -1042,7 +1130,7 @@ class _VentaCafeScreenState extends State<VentaCafeScreen>
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
-                          registro.fibra.toUpperCase(),
+                          record.farmName.toUpperCase(),
                           style: TextStyle(
                             fontWeight: FontWeight.bold,
                             color: Colors.green.shade700,
@@ -1057,12 +1145,12 @@ class _VentaCafeScreenState extends State<VentaCafeScreen>
                       Icon(Icons.scale, size: 18, color: Colors.green.shade700),
                       const SizedBox(width: 8),
                       Text(
-                        '${registro.kilosSeco.toStringAsFixed(1)} kg',
+                        '${record.dryCoffeeKg.toStringAsFixed(1)} kg',
                         style: TextStyle(color: Colors.green.shade700),
                       ),
                       const Spacer(),
                       Text(
-                        currencyFormat.format(registro.total),
+                        currencyFormat.format(record.total),
                         style: TextStyle(
                           color: Colors.green.shade700,
                           fontWeight: FontWeight.bold,
@@ -1094,9 +1182,9 @@ class _VentaCafeScreenState extends State<VentaCafeScreen>
           ),
           ElevatedButton(
             onPressed: () {
-              if (registro.firebaseId != null) {
-                context.read<RegistroProvider>().deleteRegistro(
-                  registro.firebaseId!,
+              if (record.firebaseId != null) {
+                context.read<RecordsProvider>().deleteRecord(
+                  record.firebaseId!,
                 );
               }
               Navigator.pop(ctx);
@@ -1112,7 +1200,7 @@ class _VentaCafeScreenState extends State<VentaCafeScreen>
     );
   }
 
-  Widget _buildNoFincasMessage() {
+  Widget _buildNoFarmsMessage() {
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(32),

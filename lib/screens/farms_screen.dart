@@ -1,102 +1,127 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
-import '../models/finca.dart';
-import '../providers/registro_provider.dart';
+import '../models/farm.dart';
+import '../providers/records_provider.dart';
+import '../theme/app_theme.dart';
 
-class FincasScreen extends StatefulWidget {
-  const FincasScreen({super.key});
+class FarmsScreen extends StatefulWidget {
+  const FarmsScreen({super.key});
 
   @override
-  State<FincasScreen> createState() => _FincasScreenState();
+  State<FarmsScreen> createState() => _FarmsScreenState();
 }
 
-class _FincasScreenState extends State<FincasScreen> {
+class _FarmsScreenState extends State<FarmsScreen> {
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<RegistroProvider>().loadFincas();
+      context.read<RecordsProvider>().loadFarms();
     });
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Mis Fincas'), centerTitle: true),
-      body: Consumer<RegistroProvider>(
-        builder: (context, provider, child) {
-          final fincas = provider.fincasList;
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [Color(0xFFF4EEE7), Color(0xFFF1E8DF)],
+          ),
+        ),
+        child: Consumer<RecordsProvider>(
+          builder: (context, provider, child) {
+            final farms = provider.farms;
 
-          if (fincas.isEmpty) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.landscape, size: 80, color: Colors.grey[400]),
-                  const SizedBox(height: 16),
-                  Text(
-                    'No tienes fincas registradas',
-                    style: TextStyle(fontSize: 18, color: Colors.grey[600]),
+            if (farms.isEmpty) {
+              return Center(
+                child: Container(
+                  margin: const EdgeInsets.all(22),
+                  padding: const EdgeInsets.all(24),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(24),
                   ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Agrega tu primera finca',
-                    style: TextStyle(fontSize: 14, color: Colors.grey[500]),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.landscape_outlined,
+                        size: 62,
+                        color: Colors.brown.shade300,
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        'No tienes fincas registradas',
+                        style: TextStyle(
+                          fontSize: 18,
+                          color: Colors.grey[800],
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        'Agrega tu primera finca para empezar',
+                        style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+                      ),
+                    ],
                   ),
-                ],
-              ),
-            );
-          }
-
-          return ListView.builder(
-            padding: const EdgeInsets.all(16),
-            itemCount: fincas.length,
-            itemBuilder: (context, index) {
-              final fibra = fincas[index];
-              return _FincaCard(
-                fibra: fibra,
-                onEdit: () => _showFincaDialog(context, fibra: fibra),
-                onDelete: () => _showDeleteDialog(context, fibra),
+                ),
               );
-            },
-          );
-        },
+            }
+
+            return ListView.builder(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 90),
+              itemCount: farms.length,
+              itemBuilder: (context, index) {
+                final farm = farms[index];
+                return _FarmCard(
+                  farm: farm,
+                  onEdit: () => _showFarmDialog(context, farm: farm),
+                  onDelete: () => _showDeleteDialog(context, farm),
+                );
+              },
+            );
+          },
+        ),
       ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _showFincaDialog(context),
+        onPressed: () => _showFarmDialog(context),
         icon: const Icon(Icons.add),
-        label: const Text('Agregar Finca'),
-        backgroundColor: Theme.of(context).colorScheme.primary,
+        label: const Text('Agregar Farm'),
+        backgroundColor: AppPalette.espresso,
         foregroundColor: Colors.white,
       ),
     );
   }
 
-  void _showFincaDialog(BuildContext context, {Finca? fibra}) {
+  void _showFarmDialog(BuildContext context, {Farm? farm}) {
     showDialog(
       context: context,
-      builder: (ctx) => _FincaFormDialog(
-        fibra: fibra,
-        onSave: (nuevaFinca) {
-          final provider = context.read<RegistroProvider>();
-          if (fibra != null && fibra.id != null) {
-            provider.updateFinca(nuevaFinca.copyWith(id: fibra.id));
+      builder: (ctx) => _FarmFormDialog(
+        farm: farm,
+        onSave: (newFarm) {
+          final provider = context.read<RecordsProvider>();
+          if (farm != null && farm.id != null) {
+            provider.updateFarm(newFarm.copyWith(id: farm.id));
           } else {
-            provider.addFinca(nuevaFinca);
+            provider.addFarm(newFarm);
           }
         },
       ),
     );
   }
 
-  void _showDeleteDialog(BuildContext context, Finca fibra) {
+  void _showDeleteDialog(BuildContext context, Farm farm) {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Eliminar Finca'),
+        title: const Text('Eliminar Farm'),
         content: Text(
-          '¿Estás seguro de que deseas eliminar la finca "${fibra.nombre}"?\n\n'
+          '¿Estás seguro de que deseas eliminar la finca "${farm.name}"?\n\n'
           'Los registros asociados no se eliminarán, pero deberá seleccionar '
           'otra finca para ellos.',
         ),
@@ -107,7 +132,7 @@ class _FincasScreenState extends State<FincasScreen> {
           ),
           TextButton(
             onPressed: () {
-              context.read<RegistroProvider>().removeFinca(fibra);
+              context.read<RecordsProvider>().removeFarm(farm);
               Navigator.pop(ctx);
             },
             style: TextButton.styleFrom(foregroundColor: Colors.red),
@@ -119,13 +144,13 @@ class _FincasScreenState extends State<FincasScreen> {
   }
 }
 
-class _FincaCard extends StatelessWidget {
-  final Finca fibra;
+class _FarmCard extends StatelessWidget {
+  final Farm farm;
   final VoidCallback onEdit;
   final VoidCallback onDelete;
 
-  const _FincaCard({
-    required this.fibra,
+  const _FarmCard({
+    required this.farm,
     required this.onEdit,
     required this.onDelete,
   });
@@ -134,10 +159,10 @@ class _FincaCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
-      elevation: 2,
+      elevation: 0,
       child: InkWell(
         onTap: onEdit,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(20),
         child: Padding(
           padding: const EdgeInsets.all(16),
           child: Row(
@@ -146,13 +171,10 @@ class _FincaCard extends StatelessWidget {
                 width: 50,
                 height: 50,
                 decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.primaryContainer,
-                  borderRadius: BorderRadius.circular(12),
+                  color: AppPalette.caramel.withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(14),
                 ),
-                child: Icon(
-                  Icons.landscape,
-                  color: Theme.of(context).colorScheme.primary,
-                ),
+                child: const Icon(Icons.landscape, color: AppPalette.espresso),
               ),
               const SizedBox(width: 16),
               Expanded(
@@ -160,14 +182,14 @@ class _FincaCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      fibra.nombre,
+                      farm.name,
                       style: const TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
                     const SizedBox(height: 4),
-                    if (fibra.ubicacion != null && fibra.ubicacion!.isNotEmpty)
+                    if (farm.location != null && farm.location!.isNotEmpty)
                       Row(
                         children: [
                           Icon(
@@ -176,16 +198,20 @@ class _FincaCard extends StatelessWidget {
                             color: Colors.grey[600],
                           ),
                           const SizedBox(width: 4),
-                          Text(
-                            fibra.ubicacion!,
-                            style: TextStyle(
-                              color: Colors.grey[600],
-                              fontSize: 14,
+                          Expanded(
+                            child: Text(
+                              farm.location!,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                color: Colors.grey[600],
+                                fontSize: 14,
+                              ),
                             ),
                           ),
                         ],
                       ),
-                    if (fibra.tamanoHectareas != null)
+                    if (farm.hectares != null)
                       Row(
                         children: [
                           Icon(
@@ -195,7 +221,7 @@ class _FincaCard extends StatelessWidget {
                           ),
                           const SizedBox(width: 4),
                           Text(
-                            '${fibra.tamanoHectareas} ha',
+                            '${farm.hectares} ha',
                             style: TextStyle(
                               color: Colors.grey[600],
                               fontSize: 14,
@@ -219,62 +245,62 @@ class _FincaCard extends StatelessWidget {
   }
 }
 
-class _FincaFormDialog extends StatefulWidget {
-  final Finca? fibra;
-  final Function(Finca) onSave;
+class _FarmFormDialog extends StatefulWidget {
+  final Farm? farm;
+  final Function(Farm) onSave;
 
-  const _FincaFormDialog({this.fibra, required this.onSave});
+  const _FarmFormDialog({this.farm, required this.onSave});
 
   @override
-  State<_FincaFormDialog> createState() => _FincaFormDialogState();
+  State<_FarmFormDialog> createState() => _FarmFormDialogState();
 }
 
-class _FincaFormDialogState extends State<_FincaFormDialog> {
+class _FarmFormDialogState extends State<_FarmFormDialog> {
   final _formKey = GlobalKey<FormState>();
-  late TextEditingController _nombreController;
-  late TextEditingController _ubicacionController;
-  late TextEditingController _tamanoController;
+  late TextEditingController _nameController;
+  late TextEditingController _locationController;
+  late TextEditingController _hectaresController;
 
   @override
   void initState() {
     super.initState();
-    _nombreController = TextEditingController(text: widget.fibra?.nombre ?? '');
-    _ubicacionController = TextEditingController(
-      text: widget.fibra?.ubicacion ?? '',
+    _nameController = TextEditingController(text: widget.farm?.name ?? '');
+    _locationController = TextEditingController(
+      text: widget.farm?.location ?? '',
     );
-    _tamanoController = TextEditingController(
-      text: widget.fibra?.tamanoHectareas?.toString() ?? '',
+    _hectaresController = TextEditingController(
+      text: widget.farm?.hectares?.toString() ?? '',
     );
   }
 
   @override
   void dispose() {
-    _nombreController.dispose();
-    _ubicacionController.dispose();
-    _tamanoController.dispose();
+    _nameController.dispose();
+    _locationController.dispose();
+    _hectaresController.dispose();
     super.dispose();
   }
 
   void _save() {
     if (_formKey.currentState!.validate()) {
-      final userId = context.read<RegistroProvider>().userId ?? '';
+      final userId = context.read<RecordsProvider>().userId ?? '';
 
-      final fibra = Finca(
-        id: widget.fibra?.id,
+      final farm = Farm(
+        id: widget.farm?.id,
         userId: userId,
-        nombre: _nombreController.text.trim().toUpperCase(),
-        ubicacion: _ubicacionController.text.trim().isEmpty
+        name: _nameController.text.trim().toUpperCase(),
+        location: _locationController.text.trim().isEmpty
             ? null
-            : _ubicacionController.text.trim().toUpperCase(),
-        tamanoHectareas: _tamanoController.text.trim().isEmpty
+            : _locationController.text.trim().toUpperCase(),
+        hectares: _hectaresController.text.trim().isEmpty
             ? null
-            : double.tryParse(_tamanoController.text),
-        fechaCreacion: widget.fibra?.fechaCreacion ?? DateTime.now(),
+            : double.tryParse(_hectaresController.text),
+        createdAt: widget.farm?.createdAt ?? DateTime.now(),
         isSynced: false,
-        firebaseId: widget.fibra?.firebaseId,
+        firebaseId: widget.farm?.firebaseId,
       );
 
-      widget.onSave(fibra);
+      widget.onSave(farm);
       Navigator.pop(context);
     }
   }
@@ -282,7 +308,7 @@ class _FincaFormDialogState extends State<_FincaFormDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: Text(widget.fibra == null ? 'Agregar Finca' : 'Editar Finca'),
+      title: Text(widget.farm == null ? 'Agregar Finca' : 'Editar Finca'),
       content: SingleChildScrollView(
         child: Form(
           key: _formKey,
@@ -290,7 +316,7 @@ class _FincaFormDialogState extends State<_FincaFormDialog> {
             mainAxisSize: MainAxisSize.min,
             children: [
               TextFormField(
-                controller: _nombreController,
+                controller: _nameController,
                 decoration: const InputDecoration(
                   labelText: 'Nombre de la finca *',
                   border: OutlineInputBorder(),
@@ -306,7 +332,7 @@ class _FincaFormDialogState extends State<_FincaFormDialog> {
               ),
               const SizedBox(height: 16),
               TextFormField(
-                controller: _ubicacionController,
+                controller: _locationController,
                 decoration: const InputDecoration(
                   labelText: 'Ubicación (vereda/municipio)',
                   border: OutlineInputBorder(),
@@ -316,7 +342,7 @@ class _FincaFormDialogState extends State<_FincaFormDialog> {
               ),
               const SizedBox(height: 16),
               TextFormField(
-                controller: _tamanoController,
+                controller: _hectaresController,
                 decoration: const InputDecoration(
                   labelText: 'Tamaño (hectáreas)',
                   border: OutlineInputBorder(),
@@ -331,8 +357,8 @@ class _FincaFormDialogState extends State<_FincaFormDialog> {
                 ],
                 validator: (value) {
                   if (value != null && value.isNotEmpty) {
-                    final tamano = double.tryParse(value);
-                    if (tamano == null || tamano <= 0) {
+                    final hectaresValue = double.tryParse(value);
+                    if (hectaresValue == null || hectaresValue <= 0) {
                       return 'Ingrese un valor válido';
                     }
                   }
@@ -350,7 +376,7 @@ class _FincaFormDialogState extends State<_FincaFormDialog> {
         ),
         ElevatedButton(
           onPressed: _save,
-          child: Text(widget.fibra == null ? 'Agregar' : 'Guardar'),
+          child: Text(widget.farm == null ? 'Agregar' : 'Guardar'),
         ),
       ],
     );

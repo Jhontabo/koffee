@@ -1,138 +1,44 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
-import '../providers/registro_provider.dart';
-import '../providers/jornaleros_provider.dart';
-import '../screens/jornaleros_screen.dart';
-import '../screens/venta_cafe_screen.dart';
+import 'package:provider/provider.dart';
+
+import '../providers/records_provider.dart';
+import '../providers/workers_provider.dart';
+import '../screens/coffee_sales_screen.dart';
+import '../screens/workers_screen.dart';
 import '../services/pdf_service.dart';
+import '../theme/app_theme.dart';
 
 class HomeDashboard extends StatelessWidget {
   const HomeDashboard({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final registroProvider = context.watch<RegistroProvider>();
-    final jornalerosProvider = context.watch<JornalerosProvider>();
+    final recordsProvider = context.watch<RecordsProvider>();
+    final workersProvider = context.watch<WorkersProvider>();
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Card(
-            color: Colors.brown[900],
-            child: Padding(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                children: [
-                  const Icon(Icons.coffee, size: 48, color: Colors.white),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Bienvenido a Koffee',
-                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    DateFormat('EEEE, d MMMM', 'es').format(DateTime.now()),
-                    style: const TextStyle(color: Colors.white70),
-                  ),
-                ],
-              ),
-            ),
-          ),
+          _animateIn(0, _buildHeroHeader(context)),
           const SizedBox(height: 16),
-          _buildQuickAccess(
-            context,
-            icon: Icons.people,
-            title: 'Jornaleros',
-            subtitle: 'Gestionar trabajadores y registrar kilos',
-            color: Colors.orange,
-            onTap: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const JornalerosScreen()),
-            ),
+          _animateIn(1, _buildQuickActions(context)),
+          const SizedBox(height: 20),
+          _animateIn(
+            2,
+            _buildStatsGrid(context, recordsProvider, workersProvider),
           ),
-          const SizedBox(height: 12),
-          _buildQuickAccess(
-            context,
-            icon: Icons.sell,
-            title: 'Registrar Venta',
-            subtitle: 'Registrar venta de café seco',
-            color: Colors.green,
-            onTap: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const VentaCafeScreen()),
-            ),
-          ),
-          const SizedBox(height: 24),
-          const Text(
-            'Resumen',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                child: _buildSummaryCard(
-                  context,
-                  title: 'Fincas',
-                  value: '${registroProvider.fincas.length}',
-                  icon: Icons.landscape,
-                  color: Colors.green,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: _buildSummaryCard(
-                  context,
-                  title: 'Trabajadores',
-                  value: '${jornalerosProvider.trabajadores.length}',
-                  icon: Icons.people,
-                  color: Colors.orange,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                child: _buildSummaryCard(
-                  context,
-                  title: 'Ventas',
-                  value: '${registroProvider.registros.length}',
-                  icon: Icons.sell,
-                  color: Colors.green,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: _buildSummaryCard(
-                  context,
-                  title: 'Pendientes',
-                  value:
-                      '${jornalerosProvider.registros.where((r) => !r.estaPagado).length}',
-                  icon: Icons.pending_actions,
-                  color: Colors.amber,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 24),
-          _buildHistorialVentas(context, registroProvider),
+          const SizedBox(height: 20),
+          _animateIn(3, _buildRecentSales(context, recordsProvider)),
           const SizedBox(height: 16),
-          ElevatedButton.icon(
-            onPressed: () => _showPdfDialog(context, registroProvider),
-            icon: const Icon(Icons.picture_as_pdf),
-            label: const Text('Exportar Reporte PDF'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.brown[900],
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(vertical: 14),
+          _animateIn(
+            4,
+            ElevatedButton.icon(
+              onPressed: () => _showPdfDialog(context, recordsProvider),
+              icon: const Icon(Icons.picture_as_pdf_outlined),
+              label: const Text('Exportar Reporte PDF'),
             ),
           ),
         ],
@@ -140,157 +46,252 @@ class HomeDashboard extends StatelessWidget {
     );
   }
 
-  Widget _buildQuickAccess(
-    BuildContext context, {
-    required IconData icon,
-    required String title,
-    required String subtitle,
-    required Color color,
-    required VoidCallback onTap,
-  }) {
-    return Card(
-      elevation: 2,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: color.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(icon, color: color, size: 32),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      subtitle,
-                      style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-                    ),
-                  ],
-                ),
-              ),
-              Icon(Icons.arrow_forward_ios, color: Colors.grey[400], size: 16),
-            ],
-          ),
+  Widget _animateIn(int step, Widget child) {
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0, end: 1),
+      duration: Duration(milliseconds: 320 + (step * 90)),
+      curve: Curves.easeOutCubic,
+      builder: (context, value, _) {
+        return Transform.translate(
+          offset: Offset(0, (1 - value) * 16),
+          child: Opacity(opacity: value, child: child),
+        );
+      },
+    );
+  }
+
+  Widget _buildHeroHeader(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [AppPalette.espresso, AppPalette.cocoa],
         ),
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x35100000),
+            blurRadius: 20,
+            offset: Offset(0, 10),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: const Icon(Icons.coffee, size: 34, color: Colors.white),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Bienvenido a Koffee',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w800,
+                    color: Colors.white,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  DateFormat('EEEE, d MMMM', 'es').format(DateTime.now()),
+                  style: const TextStyle(
+                    color: Color(0xFFEEDFD0),
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
 
-  Widget _buildSummaryCard(
-    BuildContext context, {
-    required String title,
-    required String value,
-    required IconData icon,
-    required Color color,
-  }) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            Icon(icon, color: color, size: 28),
-            const SizedBox(height: 8),
-            Text(
-              value,
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                color: color,
-              ),
+  Widget _buildQuickActions(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isNarrow = constraints.maxWidth < 390;
+        final cards = [
+          _ActionCard(
+            icon: Icons.people_alt_outlined,
+            title: 'Jornaleros',
+            subtitle: 'Gestionar trabajadores y registrar kilogramos',
+            color: const Color(0xFFE67E22),
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const WorkersScreen()),
             ),
-            Text(
-              title,
-              style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+          ),
+          _ActionCard(
+            icon: Icons.sell_outlined,
+            title: 'Registrar Venta',
+            subtitle: 'Registrar venta de café seco',
+            color: AppPalette.leaf,
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const CoffeeSalesScreen()),
+            ),
+          ),
+        ];
+
+        if (isNarrow) {
+          return Column(
+            children: [cards[0], const SizedBox(height: 12), cards[1]],
+          );
+        }
+
+        return Row(
+          children: [
+            Expanded(child: cards[0]),
+            const SizedBox(width: 12),
+            Expanded(child: cards[1]),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildStatsGrid(
+    BuildContext context,
+    RecordsProvider recordsProvider,
+    WorkersProvider workersProvider,
+  ) {
+    final width = MediaQuery.of(context).size.width;
+    final isNarrow = width < 390;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Resumen',
+          style: TextStyle(fontSize: 19, fontWeight: FontWeight.w800),
+        ),
+        const SizedBox(height: 12),
+        GridView.count(
+          crossAxisCount: isNarrow ? 1 : 2,
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          mainAxisSpacing: 10,
+          crossAxisSpacing: 10,
+          childAspectRatio: isNarrow ? 2.5 : 1.32,
+          children: [
+            _StatCard(
+              title: 'Fincas',
+              value: '${recordsProvider.farmNames.length}',
+              icon: Icons.landscape_outlined,
+              color: const Color(0xFF2E7D32),
+            ),
+            _StatCard(
+              title: 'Workers',
+              value: '${workersProvider.workers.length}',
+              icon: Icons.groups_2_outlined,
+              color: const Color(0xFFE67E22),
+            ),
+            _StatCard(
+              title: 'Ventas',
+              value: '${recordsProvider.records.length}',
+              icon: Icons.receipt_long_outlined,
+              color: const Color(0xFF33691E),
+            ),
+            _StatCard(
+              title: 'Pendientes',
+              value:
+                  '${workersProvider.records.where((r) => !r.isPaid).length}',
+              icon: Icons.pending_actions_outlined,
+              color: const Color(0xFFAD8B00),
             ),
           ],
         ),
-      ),
+      ],
     );
   }
 
-  Widget _buildHistorialVentas(
-    BuildContext context,
-    RegistroProvider provider,
-  ) {
+  Widget _buildRecentSales(BuildContext context, RecordsProvider provider) {
     final currencyFormat = NumberFormat.currency(
       symbol: '\$',
       decimalDigits: 0,
     );
     final dateFormat = DateFormat('dd/MM/yyyy');
-    final registros = provider.registros.take(5).toList();
+    final records = provider.records.take(5).toList();
 
-    if (registros.isEmpty) {
-      return Card(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            children: [
-              Icon(Icons.receipt_long, size: 48, color: Colors.grey[400]),
-              const SizedBox(height: 8),
-              Text(
-                'No hay ventas registradas',
-                style: TextStyle(color: Colors.grey[600]),
-              ),
-            ],
-          ),
+    if (records.isEmpty) {
+      return Container(
+        padding: const EdgeInsets.all(22),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Column(
+          children: [
+            Icon(Icons.receipt_long, size: 42, color: Colors.brown.shade200),
+            const SizedBox(height: 8),
+            Text(
+              'No hay ventas registradas',
+              style: TextStyle(color: Colors.grey[700]),
+            ),
+          ],
         ),
       );
     }
 
-    return Card(
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Padding(
-            padding: EdgeInsets.all(16),
+            padding: EdgeInsets.fromLTRB(16, 16, 16, 10),
             child: Text(
               'Últimas Ventas',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800),
             ),
           ),
-          const Divider(height: 1),
-          ...registros.map(
-            (reg) => ListTile(
+          ...records.map(
+            (record) => ListTile(
               leading: CircleAvatar(
-                backgroundColor: Colors.green[100],
-                child: Icon(Icons.sell, color: Colors.green[800], size: 20),
+                radius: 18,
+                backgroundColor: AppPalette.leaf.withValues(alpha: 0.12),
+                child: const Icon(
+                  Icons.payments_outlined,
+                  color: AppPalette.leaf,
+                  size: 18,
+                ),
               ),
-              title: Text(reg.fibra.toUpperCase()),
+              title: Text(
+                record.farmName.toUpperCase(),
+                style: const TextStyle(fontWeight: FontWeight.w700),
+              ),
               subtitle: Text(
-                '${reg.kilosSeco.toStringAsFixed(1)} kg - ${dateFormat.format(reg.fecha)}',
+                '${record.dryCoffeeKg.toStringAsFixed(1)} kg - ${dateFormat.format(record.date)}',
               ),
               trailing: Text(
-                currencyFormat.format(reg.total),
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  color: Colors.green[800],
+                currencyFormat.format(record.total),
+                style: const TextStyle(
+                  fontWeight: FontWeight.w800,
+                  color: AppPalette.leaf,
                 ),
               ),
             ),
           ),
+          const SizedBox(height: 6),
         ],
       ),
     );
   }
 
-  void _showPdfDialog(BuildContext context, RegistroProvider provider) {
+  void _showPdfDialog(BuildContext context, RecordsProvider provider) {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -301,7 +302,7 @@ class HomeDashboard extends StatelessWidget {
             ListTile(
               leading: const Icon(
                 Icons.calendar_view_week,
-                color: Colors.brown,
+                color: AppPalette.cocoa,
               ),
               title: const Text('Esta Semana'),
               onTap: () {
@@ -316,7 +317,10 @@ class HomeDashboard extends StatelessWidget {
               },
             ),
             ListTile(
-              leading: const Icon(Icons.calendar_month, color: Colors.brown),
+              leading: const Icon(
+                Icons.calendar_month,
+                color: AppPalette.cocoa,
+              ),
               title: const Text('Este Mes'),
               onTap: () {
                 Navigator.pop(ctx);
@@ -331,7 +335,7 @@ class HomeDashboard extends StatelessWidget {
               },
             ),
             ListTile(
-              leading: const Icon(Icons.history, color: Colors.brown),
+              leading: const Icon(Icons.history, color: AppPalette.cocoa),
               title: const Text('Todo el Historial'),
               onTap: () {
                 Navigator.pop(ctx);
@@ -361,10 +365,10 @@ class HomeDashboard extends StatelessWidget {
     DateTime end,
     String title,
   ) async {
-    final provider = context.read<RegistroProvider>();
-    final allRecords = provider.registros;
-    final filtered = allRecords.where((reg) {
-      final date = reg.fecha;
+    final provider = context.read<RecordsProvider>();
+    final allRecords = provider.records;
+    final filtered = allRecords.where((record) {
+      final date = record.date;
       return date.isAfter(start.subtract(const Duration(days: 1))) &&
           date.isBefore(end.add(const Duration(days: 1)));
     }).toList();
@@ -381,7 +385,7 @@ class HomeDashboard extends StatelessWidget {
     try {
       await PdfService.generateReport(
         title: title,
-        registros: filtered,
+        records: filtered,
         startDate: start,
         endDate: end,
       );
@@ -392,5 +396,110 @@ class HomeDashboard extends StatelessWidget {
         ).showSnackBar(SnackBar(content: Text('Error generando PDF: $e')));
       }
     }
+  }
+}
+
+class _ActionCard extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final Color color;
+  final VoidCallback onTap;
+
+  const _ActionCard({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.color,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(18),
+        child: Ink(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(18),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.13),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(icon, color: color),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                title,
+                style: const TextStyle(
+                  fontWeight: FontWeight.w800,
+                  fontSize: 15,
+                ),
+              ),
+              const SizedBox(height: 3),
+              Text(
+                subtitle,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(color: Colors.grey[700], fontSize: 12),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _StatCard extends StatelessWidget {
+  final String title;
+  final String value;
+  final IconData icon;
+  final Color color;
+
+  const _StatCard({
+    required this.title,
+    required this.value,
+    required this.icon,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, color: color),
+          const Spacer(),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 24,
+              height: 1,
+              color: color,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(title, style: TextStyle(color: Colors.grey[700], fontSize: 12)),
+        ],
+      ),
+    );
   }
 }

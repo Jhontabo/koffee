@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../providers/registro_provider.dart';
+import '../providers/records_provider.dart';
 import '../services/auth_service.dart';
+import '../theme/app_theme.dart';
 import '../widgets/home_dashboard.dart';
-import 'fincas_screen.dart';
-import 'perfil_screen.dart';
+import 'farms_screen.dart';
+import 'profile_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -16,7 +17,7 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   int _selectedIndex = 0;
 
-  final List<String> _titles = const ['Inicio', 'Fincas', 'Perfil'];
+  final List<String> _titles = const ['Inicio', 'Farms', 'Perfil'];
 
   void navigateToTab(int index) {
     if (index >= 0 && index < _titles.length) {
@@ -29,7 +30,7 @@ class _HomeScreenState extends State<HomeScreen> {
   void _onItemTapped(int index) {
     if (index != _selectedIndex) {
       if (index == 1) {
-        context.read<RegistroProvider>().loadFincas();
+        context.read<RecordsProvider>().loadFarms();
       }
       setState(() {
         _selectedIndex = index;
@@ -41,15 +42,21 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(
-          _titles[_selectedIndex],
-          style: const TextStyle(fontWeight: FontWeight.bold),
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [AppPalette.espresso, AppPalette.cocoa],
+            ),
+            borderRadius: BorderRadius.vertical(bottom: Radius.circular(24)),
+          ),
         ),
-        centerTitle: true,
+        title: Text(_titles[_selectedIndex]),
         actions: [
           PopupMenuButton<String>(
             icon: const Icon(Icons.person),
-            tooltip: 'Usuario',
+            tooltip: 'Perfil',
             onSelected: (value) {
               if (value == 'logout') {
                 _showLogoutDialog(context);
@@ -60,7 +67,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 value: 'logout',
                 child: Row(
                   children: [
-                    Icon(Icons.logout, color: Colors.red[700]),
+                    Icon(Icons.logout, color: Colors.red[700], size: 18),
                     const SizedBox(width: 8),
                     const Text('Cerrar Sesión'),
                   ],
@@ -70,41 +77,55 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ],
       ),
-      body: IndexedStack(
-        index: _selectedIndex,
-        children: const [HomeDashboard(), FincasScreen(), PerfilScreen()],
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [Color(0xFFF4EEE7), Color(0xFFF1E8DF)],
+          ),
+        ),
+        child: IndexedStack(
+          index: _selectedIndex,
+          children: const [HomeDashboard(), FarmsScreen(), ProfileScreen()],
+        ),
       ),
       bottomNavigationBar: Container(
+        margin: const EdgeInsets.fromLTRB(16, 0, 16, 14),
         decoration: BoxDecoration(
-          boxShadow: [
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(18),
+          boxShadow: const [
             BoxShadow(
-              color: Colors.black.withOpacity(0.1),
-              blurRadius: 10,
-              offset: const Offset(0, -3),
+              color: Color(0x29000000),
+              blurRadius: 18,
+              offset: Offset(0, 5),
             ),
           ],
         ),
-        child: NavigationBar(
-          selectedIndex: _selectedIndex,
-          onDestinationSelected: _onItemTapped,
-          indicatorColor: Theme.of(context).colorScheme.secondaryContainer,
-          destinations: const [
-            NavigationDestination(
-              icon: Icon(Icons.home_outlined),
-              selectedIcon: Icon(Icons.home),
-              label: 'Inicio',
-            ),
-            NavigationDestination(
-              icon: Icon(Icons.landscape_outlined),
-              selectedIcon: Icon(Icons.landscape),
-              label: 'Fincas',
-            ),
-            NavigationDestination(
-              icon: Icon(Icons.person_outlined),
-              selectedIcon: Icon(Icons.person),
-              label: 'Perfil',
-            ),
-          ],
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(18),
+          child: NavigationBar(
+            selectedIndex: _selectedIndex,
+            onDestinationSelected: _onItemTapped,
+            destinations: const [
+              NavigationDestination(
+                icon: Icon(Icons.home_outlined),
+                selectedIcon: Icon(Icons.home),
+                label: 'Inicio',
+              ),
+              NavigationDestination(
+                icon: Icon(Icons.landscape_outlined),
+                selectedIcon: Icon(Icons.landscape),
+                label: 'Farms',
+              ),
+              NavigationDestination(
+                icon: Icon(Icons.person_outlined),
+                selectedIcon: Icon(Icons.person),
+                label: 'Perfil',
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -125,13 +146,12 @@ class _HomeScreenState extends State<HomeScreen> {
             onPressed: () async {
               Navigator.pop(ctx);
               await AuthService.instance.signOut();
-              if (mounted) {
-                Navigator.pushNamedAndRemoveUntil(
-                  context,
-                  '/login',
-                  (route) => false,
-                );
-              }
+              if (!context.mounted) return;
+              Navigator.pushNamedAndRemoveUntil(
+                context,
+                '/login',
+                (route) => false,
+              );
             },
             style: TextButton.styleFrom(foregroundColor: Colors.red),
             child: const Text('Cerrar Sesión'),

@@ -1,15 +1,14 @@
-import 'package:flutter/services.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import 'package:intl/intl.dart';
-import '../models/registro_finca.dart';
-import '../models/registro_recolector.dart';
+import '../models/coffee_record.dart';
+import '../models/worker_record.dart';
 
 class PdfService {
   static Future<void> generateReport({
     required String title,
-    required List<RegistroFinca> registros,
+    required List<CoffeeRecord> records,
     required DateTime startDate,
     required DateTime endDate,
   }) async {
@@ -23,9 +22,9 @@ class PdfService {
     double totalSeco = 0;
     double totalVenta = 0;
 
-    for (var reg in registros) {
-      totalSeco += reg.kilosSeco;
-      totalVenta += reg.total;
+    for (var record in records) {
+      totalSeco += record.dryCoffeeKg;
+      totalVenta += record.total;
     }
 
     // Format numbers
@@ -50,20 +49,20 @@ class PdfService {
             style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold),
           ),
           pw.SizedBox(height: 10),
-          pw.Table.fromTextArray(
-            headers: ['Fecha', 'Finca', 'Kilos Seco', 'Precio/kg', 'Total'],
+          pw.TableHelper.fromTextArray(
+            headers: ['Fecha', 'Farm', 'Kilos Seco', 'Precio/kg', 'Total'],
             headerStyle: pw.TextStyle(
               fontWeight: pw.FontWeight.bold,
               color: PdfColors.white,
             ),
             headerDecoration: const pw.BoxDecoration(color: PdfColors.brown900),
-            data: registros.map((reg) {
+            data: records.map((record) {
               return [
-                dateFormat.format(reg.fecha),
-                reg.fibra,
-                '${reg.kilosSeco.toStringAsFixed(2)} kg',
-                currencyFormat.format(reg.precioKilo),
-                currencyFormat.format(reg.total),
+                dateFormat.format(record.date),
+                record.farmName,
+                '${record.dryCoffeeKg.toStringAsFixed(2)} kg',
+                currencyFormat.format(record.pricePerKg),
+                currencyFormat.format(record.total),
               ];
             }).toList(),
           ),
@@ -96,11 +95,11 @@ class PdfService {
         pw.SizedBox(height: 8),
         pw.Text(
           title,
-          style: pw.TextStyle(fontSize: 18, color: PdfColors.grey700),
+          style: const pw.TextStyle(fontSize: 18, color: PdfColors.grey700),
         ),
         pw.Text(
           'Periodo: ${DateFormat('dd/MM/yyyy').format(start)} - ${DateFormat('dd/MM/yyyy').format(end)}',
-          style: pw.TextStyle(fontSize: 12, color: PdfColors.grey600),
+          style: const pw.TextStyle(fontSize: 12, color: PdfColors.grey600),
         ),
         pw.Divider(color: PdfColors.grey300),
       ],
@@ -108,8 +107,8 @@ class PdfService {
   }
 
   static pw.Widget _buildSummary(
-    double seco,
-    double venta,
+    double dryKg,
+    double sales,
     NumberFormat currency,
   ) {
     return pw.Container(
@@ -124,12 +123,12 @@ class PdfService {
         children: [
           _buildSummaryItem(
             'Total Café Seco',
-            '${seco.toStringAsFixed(2)} kg',
+            '${dryKg.toStringAsFixed(2)} kg',
             PdfColors.brown600,
           ),
           _buildSummaryItem(
             'Total Venta',
-            currency.format(venta),
+            currency.format(sales),
             PdfColors.green800,
           ),
         ],
@@ -161,34 +160,6 @@ class PdfService {
     );
   }
 
-  static pw.Widget _buildTable(
-    List<RegistroFinca> registros,
-    DateFormat dateFormat,
-    NumberFormat currency,
-  ) {
-    return pw.Table.fromTextArray(
-      headers: ['Fecha', 'Finca', 'Kilos Seco', 'Precio/kg', 'Total'],
-      data: registros.map((reg) {
-        return [
-          dateFormat.format(reg.fecha),
-          reg.fibra,
-          '${reg.kilosSeco.toStringAsFixed(2)} kg',
-          currency.format(reg.precioKilo),
-          currency.format(reg.total),
-        ];
-      }).toList(),
-      headerStyle: pw.TextStyle(
-        fontWeight: pw.FontWeight.bold,
-        color: PdfColors.white,
-      ),
-      headerDecoration: const pw.BoxDecoration(color: PdfColors.brown900),
-      rowDecoration: const pw.BoxDecoration(
-        border: pw.Border(bottom: pw.BorderSide(color: PdfColors.grey200)),
-      ),
-      cellAlignment: pw.Alignment.centerLeft,
-    );
-  }
-
   static pw.Widget _buildFooter() {
     return pw.Column(
       children: [
@@ -211,9 +182,9 @@ class PdfService {
     );
   }
 
-  static Future<void> generatePagoReport({
+  static Future<void> generateWorkerPaymentReport({
     required String title,
-    required List<RegistroRecolector> registros,
+    required List<WorkerRecord> records,
     required DateTime startDate,
     required DateTime endDate,
   }) async {
@@ -228,18 +199,18 @@ class PdfService {
     );
     final dateFormat = DateFormat('dd/MM/yyyy');
 
-    final Map<String, List<RegistroRecolector>> trabajadoresMap = {};
-    for (var reg in registros) {
-      if (trabajadoresMap.containsKey(reg.nombreTrabajador)) {
-        trabajadoresMap[reg.nombreTrabajador]!.add(reg);
+    final Map<String, List<WorkerRecord>> workersMap = {};
+    for (var record in records) {
+      if (workersMap.containsKey(record.workerName)) {
+        workersMap[record.workerName]!.add(record);
       } else {
-        trabajadoresMap[reg.nombreTrabajador] = [reg];
+        workersMap[record.workerName] = [record];
       }
     }
 
     double totalGeneral = 0;
-    for (var reg in registros) {
-      totalGeneral += reg.total;
+    for (var record in records) {
+      totalGeneral += record.total;
     }
 
     pdf.addPage(
@@ -248,25 +219,25 @@ class PdfService {
         margin: const pw.EdgeInsets.all(32),
         theme: pw.ThemeData.withFont(base: fontRegular, bold: fontBold),
         build: (context) => [
-          _buildPagoHeader(title, startDate, endDate),
+          _buildWorkerPaymentHeader(title, startDate, endDate),
           pw.SizedBox(height: 20),
-          _buildPagoSummary(totalGeneral, currencyFormat),
+          _buildWorkerPaymentSummary(totalGeneral, currencyFormat),
           pw.SizedBox(height: 20),
           pw.Text(
-            'Detalle por Trabajador',
+            'Detalle por Worker',
             style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold),
           ),
           pw.SizedBox(height: 10),
-          ...trabajadoresMap.entries.map((entry) {
-            final nombre = entry.key;
-            final regList = entry.value;
-            final totalTrabajador = regList.fold(
+          ...workersMap.entries.map((entry) {
+            final workerName = entry.key;
+            final workerRecords = entry.value;
+            final totalWorker = workerRecords.fold(
               0.0,
-              (sum, reg) => sum + reg.total,
+              (sum, record) => sum + record.total,
             );
-            final kilosTrabajador = regList.fold(
+            final workerKilograms = workerRecords.fold(
               0.0,
-              (sum, reg) => sum + reg.kilos,
+              (sum, record) => sum + record.kilograms,
             );
 
             return pw.Container(
@@ -281,28 +252,28 @@ class PdfService {
                       mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                       children: [
                         pw.Text(
-                          nombre,
+                          workerName,
                           style: pw.TextStyle(
                             fontWeight: pw.FontWeight.bold,
                             fontSize: 14,
                           ),
                         ),
                         pw.Text(
-                          '${kilosTrabajador.toStringAsFixed(1)} kg - ${currencyFormat.format(totalTrabajador)}',
+                          '${workerKilograms.toStringAsFixed(1)} kg - ${currencyFormat.format(totalWorker)}',
                           style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
                         ),
                       ],
                     ),
                   ),
-                  pw.Table.fromTextArray(
-                    headers: ['Fecha', 'Finca', 'Kilos', 'Precio/kg', 'Total'],
-                    data: regList.map((reg) {
+                  pw.TableHelper.fromTextArray(
+                    headers: ['Fecha', 'Farm', 'Kilos', 'Precio/kg', 'Total'],
+                    data: workerRecords.map((record) {
                       return [
-                        dateFormat.format(reg.fecha),
-                        reg.fibra,
-                        '${reg.kilos.toStringAsFixed(1)} kg',
-                        currencyFormat.format(reg.precioKilo),
-                        currencyFormat.format(reg.total),
+                        dateFormat.format(record.date),
+                        record.farmName,
+                        '${record.kilograms.toStringAsFixed(1)} kg',
+                        currencyFormat.format(record.pricePerKg),
+                        currencyFormat.format(record.total),
                       ];
                     }).toList(),
                     headerStyle: pw.TextStyle(
@@ -332,7 +303,7 @@ class PdfService {
     );
   }
 
-  static pw.Widget _buildPagoHeader(
+  static pw.Widget _buildWorkerPaymentHeader(
     String title,
     DateTime start,
     DateTime end,
@@ -351,7 +322,7 @@ class PdfService {
         pw.SizedBox(height: 8),
         pw.Text(
           title,
-          style: pw.TextStyle(fontSize: 18, color: PdfColors.grey700),
+          style: const pw.TextStyle(fontSize: 18, color: PdfColors.grey700),
         ),
         pw.Text(
           'Periodo: ${DateFormat('dd/MM/yyyy').format(start)} - ${DateFormat('dd/MM/yyyy').format(end)}',
@@ -362,7 +333,7 @@ class PdfService {
     );
   }
 
-  static pw.Widget _buildPagoSummary(double total, NumberFormat currency) {
+  static pw.Widget _buildWorkerPaymentSummary(double total, NumberFormat currency) {
     return pw.Container(
       padding: const pw.EdgeInsets.all(12),
       decoration: pw.BoxDecoration(

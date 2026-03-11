@@ -1,25 +1,23 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:provider/provider.dart';
-import '../providers/registro_provider.dart';
+import '../providers/records_provider.dart';
 
-class KilosBarChart extends StatelessWidget {
-  const KilosBarChart({super.key});
+class KilogramsBarChart extends StatelessWidget {
+  const KilogramsBarChart({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<RegistroProvider>(
+    return Consumer<RecordsProvider>(
       builder: (context, provider, child) {
-        final kilosData = provider.kilosByFinca;
+        final kilogramsData = provider.kilogramsByFarm;
 
-        if (kilosData.isEmpty) {
-          return const Center(
-            child: Text('No hay datos para mostrar'),
-          );
+        if (kilogramsData.isEmpty) {
+          return const Center(child: Text('No hay datos para mostrar'));
         }
 
         final barGroups = <BarChartGroupData>[];
-        final farmNames = kilosData.keys.toList();
+        final farmNames = kilogramsData.keys.toList();
 
         for (int i = 0; i < farmNames.length; i++) {
           barGroups.add(
@@ -27,10 +25,12 @@ class KilosBarChart extends StatelessWidget {
               x: i,
               barRods: [
                 BarChartRodData(
-                  toY: kilosData[farmNames[i]]!,
+                  toY: kilogramsData[farmNames[i]]!,
                   color: Theme.of(context).colorScheme.primary,
                   width: 20,
-                  borderRadius: const BorderRadius.vertical(top: Radius.circular(4)),
+                  borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(4),
+                  ),
                 ),
               ],
             ),
@@ -42,18 +42,15 @@ class KilosBarChart extends StatelessWidget {
           child: Column(
             children: [
               const Text(
-                'Kilos por Finca',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
+                'Kilos por Farm',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 24),
               Expanded(
                 child: BarChart(
                   BarChartData(
                     alignment: BarChartAlignment.spaceAround,
-                    maxY: _getMaxY(kilosData),
+                    maxY: _getMaxY(kilogramsData),
                     barGroups: barGroups,
                     titlesData: FlTitlesData(
                       show: true,

@@ -2,17 +2,18 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
-import '../providers/registro_provider.dart';
+import '../providers/records_provider.dart';
 import '../services/auth_service.dart';
+import '../theme/app_theme.dart';
 
-class PerfilScreen extends StatefulWidget {
-  const PerfilScreen({super.key});
+class ProfileScreen extends StatefulWidget {
+  const ProfileScreen({super.key});
 
   @override
-  State<PerfilScreen> createState() => _PerfilScreenState();
+  State<ProfileScreen> createState() => _ProfileScreenState();
 }
 
-class _PerfilScreenState extends State<PerfilScreen> {
+class _ProfileScreenState extends State<ProfileScreen> {
   @override
   Widget build(BuildContext context) {
     final currencyFormat = NumberFormat.currency(
@@ -21,113 +22,106 @@ class _PerfilScreenState extends State<PerfilScreen> {
     );
 
     return Scaffold(
-      body: Consumer<RegistroProvider>(
+      backgroundColor: Colors.transparent,
+      body: Consumer<RecordsProvider>(
         builder: (context, provider, child) {
           final user = AuthService.instance.currentUser;
           final email = user?.email ?? 'No disponible';
-          final registros = provider.registros;
-          final fincas = provider.fincasList;
+          final records = provider.records;
+          final farms = provider.farms;
 
-          final totalVentas = registros.fold<double>(
+          final totalSales = records.fold<double>(0, (sum, r) => sum + r.total);
+          final totalDryKg = records.fold<double>(
             0,
-            (sum, r) => sum + r.total,
+            (sum, r) => sum + r.dryCoffeeKg,
           );
 
-          final totalKilosSeco = registros.fold<double>(
-            0,
-            (sum, r) => sum + r.kilosSeco,
-          );
-
-          return CustomScrollView(
-            slivers: [
-              SliverAppBar(
-                expandedHeight: 200,
-                pinned: true,
-                backgroundColor: Colors.brown[900],
-                flexibleSpace: FlexibleSpaceBar(
-                  background: Container(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [Colors.brown[900]!, Colors.brown[700]!],
-                      ),
-                    ),
-                    child: SafeArea(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const SizedBox(height: 20),
-                          CircleAvatar(
-                            radius: 45,
-                            backgroundColor: Colors.white,
-                            child: Icon(
-                              Icons.person,
-                              size: 50,
-                              color: Colors.brown[900],
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-                          Text(
-                            email.split('@').first.toUpperCase(),
-                            style: const TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                            ),
-                          ),
-                          Text(
-                            email,
-                            style: const TextStyle(
-                              fontSize: 14,
-                              color: Colors.white70,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
+          return SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildProfileHeader(email),
+                const SizedBox(height: 18),
+                _buildSummarySection(
+                  context,
+                  currencyFormat,
+                  records.length,
+                  farms.length,
+                  totalDryKg,
+                  totalSales,
                 ),
-              ),
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _buildResumenSection(
-                        context,
-                        currencyFormat,
-                        registros.length,
-                        fincas.length,
-                        totalKilosSeco,
-                        totalVentas,
-                      ),
-                      const SizedBox(height: 20),
-                      _buildInfoCard(context, email),
-                      const SizedBox(height: 20),
-                      _buildAccionesSection(context),
-                      const SizedBox(height: 20),
-                      _buildInfoApp(),
-                    ],
-                  ),
-                ),
-              ),
-            ],
+                const SizedBox(height: 18),
+                _buildInfoCard(context, email),
+                const SizedBox(height: 18),
+                _buildActionsSection(context),
+                const SizedBox(height: 18),
+                _buildAppInfo(),
+              ],
+            ),
           );
         },
       ),
     );
   }
 
-  Widget _buildResumenSection(
+  Widget _buildProfileHeader(String email) {
+    final username = email.split('@').first.toUpperCase();
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [AppPalette.espresso, AppPalette.cocoa],
+        ),
+        borderRadius: BorderRadius.circular(24),
+      ),
+      child: Row(
+        children: [
+          CircleAvatar(
+            radius: 34,
+            backgroundColor: Colors.white,
+            child: Icon(Icons.person, size: 40, color: Colors.brown[900]),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  username,
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w800,
+                    color: Colors.white,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  email,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(color: Color(0xFFECD9C8)),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSummarySection(
     BuildContext context,
     NumberFormat currency,
-    int totalVentas,
-    int totalFincas,
-    double kilosSeco,
-    double ingresos,
+    int totalSales,
+    int farmCount,
+    double totalDryKg,
+    double totalIncome,
   ) {
+    final width = MediaQuery.of(context).size.width;
+    final isNarrow = width < 390;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -136,46 +130,37 @@ class _PerfilScreenState extends State<PerfilScreen> {
           style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 12),
-        Row(
+        GridView.count(
+          crossAxisCount: isNarrow ? 1 : 2,
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          mainAxisSpacing: 12,
+          crossAxisSpacing: 12,
+          childAspectRatio: isNarrow ? 3.4 : 1.6,
           children: [
-            Expanded(
-              child: _buildStatCard(
-                icon: Icons.sell,
-                label: 'Ventas',
-                value: '$totalVentas',
-                color: Colors.green,
-              ),
+            _buildStatCard(
+              icon: Icons.sell,
+              label: 'Ventas',
+              value: '$totalSales',
+              color: Colors.green,
             ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _buildStatCard(
-                icon: Icons.landscape,
-                label: 'Fincas',
-                value: '$totalFincas',
-                color: Colors.brown,
-              ),
+            _buildStatCard(
+              icon: Icons.landscape,
+              label: 'Fincas',
+              value: '$farmCount',
+              color: Colors.brown,
             ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        Row(
-          children: [
-            Expanded(
-              child: _buildStatCard(
-                icon: Icons.scale,
-                label: 'Kilos Secos',
-                value: '${kilosSeco.toStringAsFixed(1)} kg',
-                color: Colors.orange,
-              ),
+            _buildStatCard(
+              icon: Icons.scale,
+              label: 'Kilos Secos',
+              value: '${totalDryKg.toStringAsFixed(1)} kg',
+              color: Colors.orange,
             ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _buildStatCard(
-                icon: Icons.attach_money,
-                label: 'Ingresos',
-                value: currency.format(ingresos),
-                color: Colors.green,
-              ),
+            _buildStatCard(
+              icon: Icons.attach_money,
+              label: 'Ingresos',
+              value: currency.format(totalIncome),
+              color: Colors.green,
             ),
           ],
         ),
@@ -199,7 +184,7 @@ class _PerfilScreenState extends State<PerfilScreen> {
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: color.withOpacity(0.1),
+                color: color.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Icon(icon, color: color, size: 24),
@@ -207,6 +192,7 @@ class _PerfilScreenState extends State<PerfilScreen> {
             const SizedBox(height: 12),
             Text(
               value,
+              overflow: TextOverflow.ellipsis,
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
@@ -278,12 +264,16 @@ class _PerfilScreenState extends State<PerfilScreen> {
               style: TextStyle(fontSize: 14, color: Colors.grey[600]),
             ),
           ),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w500,
-              color: valueColor,
+          Flexible(
+            child: Text(
+              value,
+              textAlign: TextAlign.right,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+                color: valueColor,
+              ),
             ),
           ),
         ],
@@ -291,7 +281,7 @@ class _PerfilScreenState extends State<PerfilScreen> {
     );
   }
 
-  Widget _buildAccionesSection(BuildContext context) {
+  Widget _buildActionsSection(BuildContext context) {
     return Card(
       elevation: 2,
       child: Column(
@@ -300,7 +290,7 @@ class _PerfilScreenState extends State<PerfilScreen> {
             leading: Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: Colors.blue.withOpacity(0.1),
+                color: Colors.blue.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: const Icon(Icons.lock, color: Colors.blue),
@@ -315,7 +305,7 @@ class _PerfilScreenState extends State<PerfilScreen> {
             leading: Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: Colors.red.withOpacity(0.1),
+                color: Colors.red.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Icon(Icons.logout, color: Colors.red[700]),
@@ -332,7 +322,7 @@ class _PerfilScreenState extends State<PerfilScreen> {
     );
   }
 
-  Widget _buildInfoApp() {
+  Widget _buildAppInfo() {
     return Card(
       color: Colors.grey[100],
       elevation: 0,

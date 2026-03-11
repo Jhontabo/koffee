@@ -1,6 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
-import 'usuario_service.dart';
+import 'firestore_migration_service.dart';
+import 'user_service.dart';
 
 class AuthService {
   static final AuthService instance = AuthService._();
@@ -22,7 +23,10 @@ class AuthService {
         password: password,
       );
       if (credential.user != null) {
-        await UsuarioService.instance.crearUsuario(
+        await FirestoreMigrationService.instance.ensureUserMigrated(
+          credential.user!.uid,
+        );
+        await UserService.instance.upsertUserProfile(
           userId: credential.user!.uid,
           email: email,
         );
@@ -44,7 +48,10 @@ class AuthService {
         password: password,
       );
       if (credential.user != null) {
-        await UsuarioService.instance.crearUsuario(
+        await FirestoreMigrationService.instance.ensureUserMigrated(
+          credential.user!.uid,
+        );
+        await UserService.instance.upsertUserProfile(
           userId: credential.user!.uid,
           email: email,
         );

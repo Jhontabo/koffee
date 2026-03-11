@@ -1,16 +1,16 @@
-class Trabajador {
+class Worker {
   final int? id;
   final String userId;
-  final String nombre;
-  final String? telefono;
+  final String name;
+  final String? phone;
   final bool isSynced;
   final String? firebaseId;
 
-  Trabajador({
+  Worker({
     this.id,
     required this.userId,
-    required this.nombre,
-    this.telefono,
+    required this.name,
+    this.phone,
     this.isSynced = false,
     this.firebaseId,
   });
@@ -19,46 +19,41 @@ class Trabajador {
     return {
       'id': id,
       'userId': userId,
-      'nombre': nombre,
-      'telefono': telefono,
+      'name': name,
+      'phone': phone,
       'isSynced': isSynced ? 1 : 0,
       'firebaseId': firebaseId,
     };
   }
 
-  factory Trabajador.fromMap(Map<String, dynamic> map) {
-    return Trabajador(
+  factory Worker.fromMap(Map<String, dynamic> map) {
+    return Worker(
       id: map['id'] as int?,
       userId: map['userId'] as String? ?? '',
-      nombre: map['nombre'] as String,
-      telefono: map['telefono'] as String?,
-      isSynced: map['isSynced'] == 1,
+      name: (map['name'] ?? '') as String,
+      phone: map['phone'] as String?,
+      isSynced: map['isSynced'] == 1 || map['isSynced'] == true,
       firebaseId: map['firebaseId'] as String?,
     );
   }
 
   Map<String, dynamic> toFirestore() {
-    return {
-      'userId': userId,
-      'nombre': nombre,
-      'telefono': telefono,
-      'isSynced': true,
-    };
+    return {'userId': userId, 'name': name, 'phone': phone, 'isSynced': true};
   }
 
-  Trabajador copyWith({
+  Worker copyWith({
     int? id,
     String? userId,
-    String? nombre,
-    String? telefono,
+    String? name,
+    String? phone,
     bool? isSynced,
     String? firebaseId,
   }) {
-    return Trabajador(
+    return Worker(
       id: id ?? this.id,
       userId: userId ?? this.userId,
-      nombre: nombre ?? this.nombre,
-      telefono: telefono ?? this.telefono,
+      name: name ?? this.name,
+      phone: phone ?? this.phone,
       isSynced: isSynced ?? this.isSynced,
       firebaseId: firebaseId ?? this.firebaseId,
     );
