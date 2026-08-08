@@ -4,7 +4,6 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'firebase_options.dart';
 import 'providers/records_provider.dart';
-import 'providers/workers_provider.dart';
 import 'screens/home_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/register_screen.dart';
@@ -26,7 +25,6 @@ class MyApp extends StatelessWidget {
     return MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => RecordsProvider()),
-        ChangeNotifierProvider(create: (_) => WorkersProvider()),
       ],
       child: MaterialApp(
         title: 'Koffee',

@@ -28,8 +28,6 @@ class FirestoreMigrationService {
           await _migrateUserProfile(userId);
           await _migrateFarms(userId);
           await _migrateCoffeeRecords(userId);
-          await _migrateWorkers(userId);
-          await _migrateWorkerRecords(userId);
         }
 
         if (schemaVersion < 3) {
@@ -114,53 +112,6 @@ class FirestoreMigrationService {
     );
   }
 
-  Future<void> _migrateWorkers(String userId) {
-    return _migrateCollection(
-      legacyCollection: 'trabajadores',
-      targetCollection: 'workers',
-      userId: userId,
-      normalize: (data) => {
-        'userId': _asString(data['userId']) ?? userId,
-        'name': _asString(data['name'] ?? data['nombre']) ?? '',
-        'phone': _asString(data['phone'] ?? data['telefono']),
-        'isSynced': true,
-      },
-    );
-  }
-
-  Future<void> _migrateWorkerRecords(String userId) {
-    return _migrateCollection(
-      legacyCollection: 'registros_recolector',
-      targetCollection: 'worker_records',
-      userId: userId,
-      normalize: (data) {
-        final kilograms = _asDouble(data['kilograms'] ?? data['kilos']) ?? 0;
-        final pricePerKg =
-            _asDouble(data['pricePerKg'] ?? data['precioKilo']) ?? 0;
-        return {
-          'userId': _asString(data['userId']) ?? userId,
-          'workerId': _asString(data['workerId'] ?? data['trabajadorId']) ?? '',
-          'workerName':
-              _asString(
-                data['workerName'] ??
-                    data['nombreTrabajador'] ??
-                    data['nombreWorker'],
-              ) ??
-              '',
-          'date': _toIsoString(data['date'] ?? data['fecha']),
-          'kilograms': kilograms,
-          'pricePerKg': pricePerKg,
-          'total': _asDouble(data['total']) ?? (kilograms * pricePerKg),
-          'farmName':
-              _asString(data['farmName'] ?? data['finca'] ?? data['fibra']) ??
-              '',
-          'isPaid': _asBool(data['isPaid'] ?? data['estaPagado']),
-          'isSynced': true,
-        };
-      },
-    );
-  }
-
   Future<void> _migrateCollection({
     required String legacyCollection,
     required String targetCollection,
@@ -209,16 +160,6 @@ class FirestoreMigrationService {
       userId: userId,
       legacyCollection: 'registros',
       targetCollection: 'records',
-    );
-    await _archiveAndDeleteCollection(
-      userId: userId,
-      legacyCollection: 'trabajadores',
-      targetCollection: 'workers',
-    );
-    await _archiveAndDeleteCollection(
-      userId: userId,
-      legacyCollection: 'registros_recolector',
-      targetCollection: 'worker_records',
     );
   }
 
@@ -314,14 +255,6 @@ class FirestoreMigrationService {
     if (value == null) return null;
     if (value is num) return value.toDouble();
     return double.tryParse(value.toString());
-  }
-
-  static bool _asBool(dynamic value) {
-    if (value == null) return false;
-    if (value is bool) return value;
-    if (value is num) return value != 0;
-    final normalized = value.toString().trim().toLowerCase();
-    return normalized == 'true' || normalized == '1' || normalized == 'yes';
   }
 
   static String? _toIsoString(dynamic value) {

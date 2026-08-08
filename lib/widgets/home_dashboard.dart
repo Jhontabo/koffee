@@ -3,9 +3,7 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import '../providers/records_provider.dart';
-import '../providers/workers_provider.dart';
 import '../screens/coffee_sales_screen.dart';
-import '../screens/workers_screen.dart';
 import '../services/pdf_service.dart';
 import '../theme/app_theme.dart';
 
@@ -15,7 +13,6 @@ class HomeDashboard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final recordsProvider = context.watch<RecordsProvider>();
-    final workersProvider = context.watch<WorkersProvider>();
 
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
@@ -26,10 +23,7 @@ class HomeDashboard extends StatelessWidget {
           const SizedBox(height: 16),
           _animateIn(1, _buildQuickActions(context)),
           const SizedBox(height: 20),
-          _animateIn(
-            2,
-            _buildStatsGrid(context, recordsProvider, workersProvider),
-          ),
+          _animateIn(2, _buildStatsGrid(context, recordsProvider)),
           const SizedBox(height: 20),
           _animateIn(3, _buildRecentSales(context, recordsProvider)),
           const SizedBox(height: 16),
@@ -118,53 +112,21 @@ class HomeDashboard extends StatelessWidget {
   }
 
   Widget _buildQuickActions(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final isNarrow = constraints.maxWidth < 390;
-        final cards = [
-          _ActionCard(
-            icon: Icons.people_alt_outlined,
-            title: 'Jornaleros',
-            subtitle: 'Gestionar trabajadores y registrar kilogramos',
-            color: const Color(0xFFE67E22),
-            onTap: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const WorkersScreen()),
-            ),
-          ),
-          _ActionCard(
-            icon: Icons.sell_outlined,
-            title: 'Registrar Venta',
-            subtitle: 'Registrar venta de café seco',
-            color: AppPalette.leaf,
-            onTap: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const CoffeeSalesScreen()),
-            ),
-          ),
-        ];
-
-        if (isNarrow) {
-          return Column(
-            children: [cards[0], const SizedBox(height: 12), cards[1]],
-          );
-        }
-
-        return Row(
-          children: [
-            Expanded(child: cards[0]),
-            const SizedBox(width: 12),
-            Expanded(child: cards[1]),
-          ],
-        );
-      },
+    return _ActionCard(
+      icon: Icons.sell_outlined,
+      title: 'Registrar Venta',
+      subtitle: 'Registrar venta de café seco',
+      color: AppPalette.leaf,
+      onTap: () => Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const CoffeeSalesScreen()),
+      ),
     );
   }
 
   Widget _buildStatsGrid(
     BuildContext context,
     RecordsProvider recordsProvider,
-    WorkersProvider workersProvider,
   ) {
     final width = MediaQuery.of(context).size.width;
     final isNarrow = width < 390;
@@ -191,23 +153,10 @@ class HomeDashboard extends StatelessWidget {
               color: const Color(0xFF2E7D32),
             ),
             _StatCard(
-              title: 'Workers',
-              value: '${workersProvider.workers.length}',
-              icon: Icons.groups_2_outlined,
-              color: const Color(0xFFE67E22),
-            ),
-            _StatCard(
               title: 'Ventas',
               value: '${recordsProvider.records.length}',
               icon: Icons.receipt_long_outlined,
               color: const Color(0xFF33691E),
-            ),
-            _StatCard(
-              title: 'Pendientes',
-              value:
-                  '${workersProvider.records.where((r) => !r.isPaid).length}',
-              icon: Icons.pending_actions_outlined,
-              color: const Color(0xFFAD8B00),
             ),
           ],
         ),
