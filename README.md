@@ -2,6 +2,10 @@
 
 An offline-first agricultural registry application for tracking coffee production from different farms (fincas).
 
+## Pantalla inicial
+
+![Pantalla inicial](assets/screenshot_home.png)
+
 ## Features
 
 - **Dual Registration**: Separate tabs for "Rojo" (red coffee cherries) and "Seco" (dry coffee beans)
@@ -9,6 +13,8 @@ An offline-first agricultural registry application for tracking coffee productio
 - **Offline Support**: Works without internet connection
 - **Cloud Sync**: Automatically syncs data to Firebase when online
 - **Data Visualization**: View production statistics by farm in charts
+- **PDF Reports**: Export sales data to PDF for sharing or archiving
+- **Responsive Design**: Adaptive layout for phones and larger screens
 
 ## Getting Started
 
