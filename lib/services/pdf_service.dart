@@ -13,11 +13,9 @@ class PdfService {
   }) async {
     final pdf = pw.Document();
 
-    // Load fonts (using standard fonts for simplicity)
     final fontRegular = await PdfGoogleFonts.openSansRegular();
     final fontBold = await PdfGoogleFonts.openSansBold();
 
-    // Calculate totals
     double totalSeco = 0;
     double totalVenta = 0;
 
@@ -26,7 +24,6 @@ class PdfService {
       totalVenta += record.total;
     }
 
-    // Format numbers
     final currencyFormat = NumberFormat.currency(
       symbol: '\$',
       decimalDigits: 0,
@@ -45,12 +42,12 @@ class PdfService {
           pw.SizedBox(height: 20),
           pw.Text(
             'Detalle de Registros',
-            style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold),
+            style: const pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold),
           ),
           pw.SizedBox(height: 10),
           pw.TableHelper.fromTextArray(
-            headers: ['Fecha', 'Farm', 'Kilos Seco', 'Precio/kg', 'Total'],
-            headerStyle: pw.TextStyle(
+            headers: ['Fecha', 'Finca', 'Kilos Seco', 'Precio/kg', 'Total'],
+            headerStyle: const pw.TextStyle(
               fontWeight: pw.FontWeight.bold,
               color: PdfColors.white,
             ),
@@ -71,11 +68,10 @@ class PdfService {
       ),
     );
 
-    // Share directly (WhatsApp, Email, etc.)
     await Printing.sharePdf(
       bytes: await pdf.save(),
       filename:
-          'Reporte_Koffee_${DateFormat('yyyyMMdd').format(DateTime.now())}.pdf',
+          'Reporte_Koffee_${DateFormat('yyyyMMdd_HHmm').format(DateTime.now())}.pdf',
     );
   }
 
@@ -85,10 +81,10 @@ class PdfService {
       children: [
         pw.Text(
           'Koffee - Registro Agrícola',
-          style: pw.TextStyle(
+          style: const pw.TextStyle(
             fontSize: 24,
             fontWeight: pw.FontWeight.bold,
-            color: PdfColors.brown900,
+            color: PdfColor.fromInt(0xFF2E1C14),
           ),
         ),
         pw.SizedBox(height: 8),
@@ -111,7 +107,7 @@ class PdfService {
     NumberFormat currency,
   ) {
     return pw.Container(
-      padding: const pw.EdgeInsets.all(12),
+      padding: const pw.EdgeInsets.all(14),
       decoration: pw.BoxDecoration(
         border: pw.Border.all(color: PdfColors.grey300),
         borderRadius: pw.BorderRadius.circular(8),
@@ -123,7 +119,7 @@ class PdfService {
           _buildSummaryItem(
             'Total Café Seco',
             '${dryKg.toStringAsFixed(2)} kg',
-            PdfColors.brown600,
+            PdfColors.brown700,
           ),
           _buildSummaryItem(
             'Total Venta',
@@ -150,7 +146,7 @@ class PdfService {
         pw.Text(
           value,
           style: pw.TextStyle(
-            fontSize: 14,
+            fontSize: 15,
             fontWeight: pw.FontWeight.bold,
             color: color,
           ),
@@ -168,7 +164,7 @@ class PdfService {
           mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
           children: [
             pw.Text(
-              'Generado por App Koffee',
+              'Generado por Koffee App',
               style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey500),
             ),
             pw.Text(
@@ -180,5 +176,4 @@ class PdfService {
       ],
     );
   }
-
-  }
+}

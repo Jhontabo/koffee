@@ -54,16 +54,16 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   String _getErrorMessage(String error) {
-    if (error.contains('user-not-found')) {
-      return 'Usuario no encontrado';
+    if (error.contains('user-not-found') || error.contains('invalid-credential')) {
+      return 'Usuario o contraseña incorrectos';
     } else if (error.contains('wrong-password')) {
       return 'Contraseña incorrecta';
     } else if (error.contains('invalid-email')) {
       return 'Correo electrónico inválido';
     } else if (error.contains('network-request-failed')) {
-      return 'Error de conexión';
+      return 'Error de conexión. Verifica tu internet';
     }
-    return 'Error al iniciar sesión';
+    return 'Error al iniciar sesión. Intenta nuevamente';
   }
 
   @override
@@ -73,118 +73,140 @@ class _LoginScreenState extends State<LoginScreen> {
         children: [
           Container(
             decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [AppPalette.espresso, AppPalette.cocoa],
-              ),
+              gradient: AppGradients.primary,
             ),
           ),
           Positioned(
-            top: -120,
-            right: -90,
+            top: -100,
+            right: -80,
             child: _DecorationBubble(
               size: 260,
-              color: Colors.white.withValues(alpha: 0.08),
+              color: Colors.white.withValues(alpha: 0.05),
             ),
           ),
           Positioned(
-            bottom: -140,
-            left: -100,
+            bottom: -120,
+            left: -80,
             child: _DecorationBubble(
-              size: 290,
-              color: AppPalette.caramel.withValues(alpha: 0.2),
+              size: 300,
+              color: AppPalette.caramel.withValues(alpha: 0.15),
             ),
           ),
           SafeArea(
             child: Center(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.all(24),
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
                 child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 470),
+                  constraints: const BoxConstraints(maxWidth: 440),
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
+                      // App Emblem
                       Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 18,
-                          vertical: 10,
-                        ),
+                        padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
                           color: Colors.white.withValues(alpha: 0.12),
-                          borderRadius: BorderRadius.circular(999),
+                          shape: BoxShape.circle,
                           border: Border.all(
-                            color: Colors.white.withValues(alpha: 0.16),
+                            color: Colors.white.withValues(alpha: 0.2),
+                            width: 2,
                           ),
                         ),
-                        child: const Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(Icons.coffee, color: Colors.white),
-                            SizedBox(width: 8),
-                            Text(
-                              'Koffee',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 28,
-                                fontWeight: FontWeight.w800,
-                              ),
+                        child: const Icon(
+                          Icons.coffee_rounded,
+                          color: Colors.white,
+                          size: 42,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      const Text(
+                        'Koffee',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 32,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: -0.5,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Gestión inteligente de café',
+                        style: TextStyle(
+                          color: Colors.white.withValues(alpha: 0.8),
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      const SizedBox(height: 28),
+
+                      // Card form
+                      Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(28),
+                          boxShadow: const [
+                            BoxShadow(
+                              color: Color(0x35000000),
+                              blurRadius: 30,
+                              offset: Offset(0, 10),
                             ),
                           ],
                         ),
-                      ),
-                      const SizedBox(height: 24),
-                      Container(
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.93),
-                          borderRadius: BorderRadius.circular(24),
-                        ),
                         child: Padding(
-                          padding: const EdgeInsets.all(24),
+                          padding: const EdgeInsets.all(28),
                           child: Form(
                             key: _formKey,
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.stretch,
                               children: [
                                 const Text(
-                                  'Iniciar Sesión',
+                                  'Bienvenido de nuevo',
                                   style: TextStyle(
-                                    fontSize: 24,
-                                    fontWeight: FontWeight.w800,
+                                    fontSize: 22,
+                                    fontWeight: FontWeight.w900,
+                                    color: AppPalette.textPrimary,
                                   ),
                                 ),
-                                const SizedBox(height: 6),
-                                Text(
-                                  'Continúa con tu registro diario de producción.',
-                                  style: TextStyle(color: Colors.grey[700]),
+                                const SizedBox(height: 4),
+                                const Text(
+                                  'Ingresa con tu correo y contraseña',
+                                  style: TextStyle(
+                                    color: AppPalette.textSecondary,
+                                    fontSize: 13,
+                                  ),
                                 ),
-                                const SizedBox(height: 20),
+                                const SizedBox(height: 22),
                                 TextFormField(
                                   controller: _emailController,
                                   keyboardType: TextInputType.emailAddress,
                                   decoration: const InputDecoration(
                                     labelText: 'Correo electrónico',
                                     prefixIcon: Icon(Icons.email_outlined),
+                                    hintText: 'ejemplo@correo.com',
                                   ),
                                   validator: (value) {
-                                    if (value == null || value.isEmpty) {
-                                      return 'Ingrese su correo';
+                                    if (value == null || value.trim().isEmpty) {
+                                      return 'Ingresa tu correo';
+                                    }
+                                    if (!value.contains('@')) {
+                                      return 'Ingresa un correo válido';
                                     }
                                     return null;
                                   },
                                 ),
-                                const SizedBox(height: 14),
+                                const SizedBox(height: 16),
                                 TextFormField(
                                   controller: _passwordController,
                                   obscureText: _obscurePassword,
                                   decoration: InputDecoration(
                                     labelText: 'Contraseña',
-                                    prefixIcon: const Icon(Icons.lock_outline),
+                                    prefixIcon: const Icon(Icons.lock_outline_rounded),
                                     suffixIcon: IconButton(
                                       icon: Icon(
                                         _obscurePassword
-                                            ? Icons.visibility
-                                            : Icons.visibility_off,
+                                            ? Icons.visibility_outlined
+                                            : Icons.visibility_off_outlined,
+                                        size: 20,
                                       ),
                                       onPressed: () {
                                         setState(() {
@@ -195,47 +217,81 @@ class _LoginScreenState extends State<LoginScreen> {
                                   ),
                                   validator: (value) {
                                     if (value == null || value.isEmpty) {
-                                      return 'Ingrese su contraseña';
+                                      return 'Ingresa tu contraseña';
                                     }
                                     if (value.length < 6) {
-                                      return 'La contraseña debe tener al menos 6 caracteres';
+                                      return 'Mínimo 6 caracteres';
                                     }
                                     return null;
                                   },
                                 ),
                                 if (_error != null) ...[
                                   const SizedBox(height: 14),
-                                  Text(
-                                    _error!,
-                                    style: const TextStyle(
-                                      color: Colors.red,
-                                      fontSize: 14,
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                                    decoration: BoxDecoration(
+                                      color: Colors.red.shade50,
+                                      borderRadius: BorderRadius.circular(12),
+                                      border: Border.all(color: Colors.red.shade200),
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        Icon(Icons.error_outline_rounded, color: Colors.red.shade700, size: 18),
+                                        const SizedBox(width: 8),
+                                        Expanded(
+                                          child: Text(
+                                            _error!,
+                                            style: TextStyle(
+                                              color: Colors.red.shade900,
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                   ),
                                 ],
-                                const SizedBox(height: 22),
+                                const SizedBox(height: 24),
                                 ElevatedButton(
                                   onPressed: _isLoading ? null : _signIn,
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: AppPalette.espresso,
+                                    padding: const EdgeInsets.symmetric(vertical: 16),
+                                  ),
                                   child: _isLoading
                                       ? const SizedBox(
-                                          height: 20,
-                                          width: 20,
+                                          height: 22,
+                                          width: 22,
                                           child: CircularProgressIndicator(
-                                            strokeWidth: 2,
+                                            strokeWidth: 2.5,
                                             color: Colors.white,
                                           ),
                                         )
-                                      : const Text('Iniciar Sesión'),
+                                      : const Text(
+                                          'Iniciar Sesión',
+                                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
+                                        ),
                                 ),
-                                const SizedBox(height: 10),
+                                const SizedBox(height: 14),
                                 TextButton(
                                   onPressed: () {
-                                    Navigator.of(
-                                      context,
-                                    ).pushNamed('/register');
+                                    Navigator.of(context).pushNamed('/register');
                                   },
-                                  child: const Text(
-                                    '¿No tienes cuenta? Regístrate',
+                                  child: RichText(
+                                    text: const TextSpan(
+                                      text: '¿No tienes cuenta? ',
+                                      style: TextStyle(color: AppPalette.textSecondary, fontSize: 13),
+                                      children: [
+                                        TextSpan(
+                                          text: 'Regístrate aquí',
+                                          style: TextStyle(
+                                            color: AppPalette.cocoa,
+                                            fontWeight: FontWeight.w800,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
                                   ),
                                 ),
                               ],

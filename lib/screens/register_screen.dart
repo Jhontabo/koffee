@@ -58,15 +58,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   String _getErrorMessage(String error) {
     if (error.contains('email-already-in-use')) {
-      return 'Este correo ya está registrado';
+      return 'Este correo ya se encuentra registrado';
     } else if (error.contains('invalid-email')) {
       return 'Correo electrónico inválido';
     } else if (error.contains('weak-password')) {
-      return 'La contraseña es muy débil';
+      return 'La contraseña debe tener al menos 6 caracteres';
     } else if (error.contains('network-request-failed')) {
-      return 'Error de conexión';
+      return 'Error de conexión. Verifica tu internet';
     }
-    return 'Error al registrar usuario';
+    return 'Error al registrar tu cuenta. Intenta nuevamente';
   }
 
   @override
@@ -76,42 +76,45 @@ class _RegisterScreenState extends State<RegisterScreen> {
         children: [
           Container(
             decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [AppPalette.espresso, AppPalette.cocoa],
-              ),
+              gradient: AppGradients.primary,
             ),
           ),
           Positioned(
-            top: -100,
+            top: -90,
             left: -60,
             child: _DecorationBubble(
-              size: 220,
-              color: AppPalette.caramel.withValues(alpha: 0.2),
+              size: 240,
+              color: AppPalette.caramel.withValues(alpha: 0.18),
             ),
           ),
           Positioned(
-            bottom: -130,
-            right: -100,
+            bottom: -120,
+            right: -80,
             child: _DecorationBubble(
               size: 280,
-              color: Colors.white.withValues(alpha: 0.08),
+              color: Colors.white.withValues(alpha: 0.06),
             ),
           ),
           SafeArea(
             child: Center(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.all(24),
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
                 child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 470),
+                  constraints: const BoxConstraints(maxWidth: 440),
                   child: Container(
                     decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.94),
-                      borderRadius: BorderRadius.circular(24),
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(28),
+                      boxShadow: const [
+                        BoxShadow(
+                          color: Color(0x35000000),
+                          blurRadius: 30,
+                          offset: Offset(0, 10),
+                        ),
+                      ],
                     ),
                     child: Padding(
-                      padding: const EdgeInsets.all(24),
+                      padding: const EdgeInsets.all(28),
                       child: Form(
                         key: _formKey,
                         child: Column(
@@ -120,45 +123,58 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             Row(
                               children: [
                                 Container(
-                                  height: 40,
-                                  width: 40,
+                                  padding: const EdgeInsets.all(10),
                                   decoration: BoxDecoration(
-                                    color: AppPalette.caramel.withValues(
-                                      alpha: 0.2,
-                                    ),
-                                    borderRadius: BorderRadius.circular(10),
+                                    color: AppPalette.crema,
+                                    borderRadius: BorderRadius.circular(14),
+                                    border: Border.all(color: AppPalette.cardBorder),
                                   ),
                                   child: const Icon(
-                                    Icons.person_add_alt_1,
+                                    Icons.person_add_alt_1_rounded,
                                     color: AppPalette.espresso,
+                                    size: 24,
                                   ),
                                 ),
-                                const SizedBox(width: 12),
-                                const Text(
-                                  'Crear Cuenta',
-                                  style: TextStyle(
-                                    fontSize: 24,
-                                    fontWeight: FontWeight.w800,
+                                const SizedBox(width: 14),
+                                const Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'Crear Cuenta',
+                                        style: TextStyle(
+                                          fontSize: 22,
+                                          fontWeight: FontWeight.w900,
+                                          color: AppPalette.textPrimary,
+                                        ),
+                                      ),
+                                      Text(
+                                        'Únete y gestiona tus fincas',
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: AppPalette.textSecondary,
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ),
                               ],
                             ),
-                            const SizedBox(height: 8),
-                            Text(
-                              'Regístrate para gestionar tu producción y pagos.',
-                              style: TextStyle(color: Colors.grey[700]),
-                            ),
-                            const SizedBox(height: 20),
+                            const SizedBox(height: 22),
                             TextFormField(
                               controller: _emailController,
                               keyboardType: TextInputType.emailAddress,
                               decoration: const InputDecoration(
                                 labelText: 'Correo electrónico',
                                 prefixIcon: Icon(Icons.email_outlined),
+                                hintText: 'ejemplo@correo.com',
                               ),
                               validator: (value) {
-                                if (value == null || value.isEmpty) {
-                                  return 'Ingrese su correo';
+                                if (value == null || value.trim().isEmpty) {
+                                  return 'Ingresa tu correo';
+                                }
+                                if (!value.contains('@')) {
+                                  return 'Ingresa un correo válido';
                                 }
                                 return null;
                               },
@@ -169,12 +185,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               obscureText: _obscurePassword,
                               decoration: InputDecoration(
                                 labelText: 'Contraseña',
-                                prefixIcon: const Icon(Icons.lock_outline),
+                                prefixIcon: const Icon(Icons.lock_outline_rounded),
                                 suffixIcon: IconButton(
                                   icon: Icon(
                                     _obscurePassword
-                                        ? Icons.visibility
-                                        : Icons.visibility_off,
+                                        ? Icons.visibility_outlined
+                                        : Icons.visibility_off_outlined,
+                                    size: 20,
                                   ),
                                   onPressed: () {
                                     setState(() {
@@ -185,10 +202,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               ),
                               validator: (value) {
                                 if (value == null || value.isEmpty) {
-                                  return 'Ingrese una contraseña';
+                                  return 'Ingresa una contraseña';
                                 }
                                 if (value.length < 6) {
-                                  return 'La contraseña debe tener al menos 6 caracteres';
+                                  return 'Mínimo 6 caracteres';
                                 }
                                 return null;
                               },
@@ -205,8 +222,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                 suffixIcon: IconButton(
                                   icon: Icon(
                                     _obscureConfirmPassword
-                                        ? Icons.visibility
-                                        : Icons.visibility_off,
+                                        ? Icons.visibility_outlined
+                                        : Icons.visibility_off_outlined,
+                                    size: 20,
                                   ),
                                   onPressed: () {
                                     setState(() {
@@ -218,7 +236,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               ),
                               validator: (value) {
                                 if (value == null || value.isEmpty) {
-                                  return 'Confirme su contraseña';
+                                  return 'Confirma tu contraseña';
                                 }
                                 if (value != _passwordController.text) {
                                   return 'Las contraseñas no coinciden';
@@ -228,33 +246,69 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             ),
                             if (_error != null) ...[
                               const SizedBox(height: 14),
-                              Text(
-                                _error!,
-                                style: const TextStyle(
-                                  color: Colors.red,
-                                  fontSize: 14,
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                                decoration: BoxDecoration(
+                                  color: Colors.red.shade50,
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(color: Colors.red.shade200),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Icon(Icons.error_outline_rounded, color: Colors.red.shade700, size: 18),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: Text(
+                                        _error!,
+                                        style: TextStyle(
+                                          color: Colors.red.shade900,
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
                             ],
-                            const SizedBox(height: 22),
+                            const SizedBox(height: 24),
                             ElevatedButton(
                               onPressed: _isLoading ? null : _register,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppPalette.espresso,
+                                padding: const EdgeInsets.symmetric(vertical: 16),
+                              ),
                               child: _isLoading
                                   ? const SizedBox(
-                                      height: 20,
-                                      width: 20,
+                                      height: 22,
+                                      width: 22,
                                       child: CircularProgressIndicator(
-                                        strokeWidth: 2,
+                                        strokeWidth: 2.5,
                                         color: Colors.white,
                                       ),
                                     )
-                                  : const Text('Crear Cuenta'),
+                                  : const Text(
+                                      'Crear Cuenta',
+                                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
+                                    ),
                             ),
-                            const SizedBox(height: 10),
+                            const SizedBox(height: 14),
                             TextButton(
                               onPressed: () => Navigator.of(context).pop(),
-                              child: const Text(
-                                '¿Ya tienes cuenta? Inicia Sesión',
+                              child: RichText(
+                                text: const TextSpan(
+                                  text: '¿Ya tienes cuenta? ',
+                                  style: TextStyle(color: AppPalette.textSecondary, fontSize: 13),
+                                  children: [
+                                    TextSpan(
+                                      text: 'Inicia Sesión',
+                                      style: TextStyle(
+                                        color: AppPalette.cocoa,
+                                        fontWeight: FontWeight.w800,
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
                             ),
                           ],

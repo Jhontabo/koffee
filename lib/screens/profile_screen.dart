@@ -4,7 +4,9 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
 import '../providers/records_provider.dart';
 import '../services/auth_service.dart';
+import '../services/pdf_service.dart';
 import '../theme/app_theme.dart';
+import '../widgets/responsive.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -26,7 +28,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       body: Consumer<RecordsProvider>(
         builder: (context, provider, child) {
           final user = AuthService.instance.currentUser;
-          final email = user?.email ?? 'No disponible';
+          final email = user?.email ?? 'caficultor@koffee.app';
           final records = provider.records;
           final farms = provider.farms;
 
@@ -35,29 +37,33 @@ class _ProfileScreenState extends State<ProfileScreen> {
             0,
             (sum, r) => sum + r.dryCoffeeKg,
           );
+          final avgPrice = totalDryKg > 0 ? (totalSales / totalDryKg) : 0.0;
 
           return SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildProfileHeader(email),
-                const SizedBox(height: 18),
-                _buildSummarySection(
-                  context,
-                  currencyFormat,
-                  records.length,
-                  farms.length,
-                  totalDryKg,
-                  totalSales,
-                ),
-                const SizedBox(height: 18),
-                _buildInfoCard(context, email),
-                const SizedBox(height: 18),
-                _buildActionsSection(context),
-                const SizedBox(height: 18),
-                _buildAppInfo(),
-              ],
+            padding: const EdgeInsets.fromLTRB(16, 14, 16, 32),
+            child: ResponsiveCenter(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildProfileHeader(email, provider.role),
+                  const SizedBox(height: 18),
+                  _buildSummarySection(
+                    context,
+                    currencyFormat,
+                    records.length,
+                    farms.length,
+                    totalDryKg,
+                    totalSales,
+                    avgPrice,
+                  ),
+                  const SizedBox(height: 18),
+                  _buildInfoCard(context, email),
+                  const SizedBox(height: 18),
+                  _buildActionsSection(context, provider),
+                  const SizedBox(height: 18),
+                  _buildAppInfo(),
+                ],
+              ),
             ),
           );
         },
@@ -65,26 +71,45 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Widget _buildProfileHeader(String email) {
+  Widget _buildProfileHeader(String email, String role) {
     final username = email.split('@').first.toUpperCase();
+    final initial = username.isNotEmpty ? username.substring(0, 1) : 'C';
+
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(22),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [AppPalette.espresso, AppPalette.cocoa],
-        ),
+        gradient: AppGradients.primary,
         borderRadius: BorderRadius.circular(24),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x321E1109),
+            blurRadius: 18,
+            offset: Offset(0, 8),
+          ),
+        ],
       ),
       child: Row(
         children: [
-          CircleAvatar(
-            radius: 34,
-            backgroundColor: Colors.white,
-            child: Icon(Icons.person, size: 40, color: Colors.brown[900]),
+          Container(
+            width: 64,
+            height: 64,
+            decoration: BoxDecoration(
+              gradient: AppGradients.caramel,
+              shape: BoxShape.circle,
+              border: Border.all(color: Colors.white, width: 2),
+            ),
+            child: Center(
+              child: Text(
+                initial,
+                style: const TextStyle(
+                  color: AppPalette.espresso,
+                  fontSize: 26,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ),
           ),
-          const SizedBox(width: 14),
+          const SizedBox(width: 16),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -93,16 +118,43 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   username,
                   style: const TextStyle(
                     fontSize: 18,
-                    fontWeight: FontWeight.w800,
+                    fontWeight: FontWeight.w900,
                     color: Colors.white,
+                    letterSpacing: 0.3,
                   ),
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: 3),
                 Text(
                   email,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(color: Color(0xFFECD9C8)),
+                  style: const TextStyle(
+                    color: Color(0xFFECD9C8),
+                    fontSize: 13,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: AppPalette.leaf,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.verified_rounded, size: 12, color: Colors.white),
+                      const SizedBox(width: 4),
+                      Text(
+                        role.toUpperCase() == 'ADMIN' ? 'ADMINISTRADOR' : 'CAFICULTOR REGISTRADO',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 10,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),
@@ -119,48 +171,54 @@ class _ProfileScreenState extends State<ProfileScreen> {
     int farmCount,
     double totalDryKg,
     double totalIncome,
+    double avgPrice,
   ) {
-    final width = MediaQuery.of(context).size.width;
-    final isNarrow = width < 390;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'Resumen',
-          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+        const Row(
+          children: [
+            Icon(Icons.insights_rounded, color: AppPalette.cocoa, size: 18),
+            SizedBox(width: 8),
+            Text(
+              'Resumen Histórico',
+              style: TextStyle(
+                fontSize: 17,
+                fontWeight: FontWeight.w800,
+                color: AppPalette.textPrimary,
+              ),
+            ),
+          ],
         ),
         const SizedBox(height: 12),
-        GridView.count(
-          crossAxisCount: isNarrow ? 1 : 2,
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          mainAxisSpacing: 12,
-          crossAxisSpacing: 12,
-          childAspectRatio: isNarrow ? 3.4 : 1.6,
+        AutoGrid(
+          minTileWidth: 150,
+          maxColumns: 2,
+          spacing: 12,
           children: [
             _buildStatCard(
-              icon: Icons.sell,
-              label: 'Ventas',
-              value: '$totalSales',
-              color: Colors.green,
-            ),
-            _buildStatCard(
-              icon: Icons.landscape,
-              label: 'Fincas',
-              value: '$farmCount',
-              color: Colors.brown,
-            ),
-            _buildStatCard(
-              icon: Icons.scale,
-              label: 'Kilos Secos',
-              value: '${totalDryKg.toStringAsFixed(1)} kg',
-              color: Colors.orange,
-            ),
-            _buildStatCard(
-              icon: Icons.attach_money,
-              label: 'Ingresos',
+              icon: Icons.monetization_on_rounded,
+              label: 'Ingresos Totales',
               value: currency.format(totalIncome),
-              color: Colors.green,
+              color: AppPalette.leaf,
+            ),
+            _buildStatCard(
+              icon: Icons.scale_rounded,
+              label: 'Café Seco Total',
+              value: '${totalDryKg.toStringAsFixed(1)} kg',
+              color: AppPalette.caramelDark,
+            ),
+            _buildStatCard(
+              icon: Icons.receipt_long_rounded,
+              label: 'Ventas Realizadas',
+              value: '$totalSales',
+              color: AppPalette.espresso,
+            ),
+            _buildStatCard(
+              icon: Icons.landscape_rounded,
+              label: 'Fincas Activas',
+              value: '$farmCount',
+              color: const Color(0xFF43655A),
             ),
           ],
         ),
@@ -174,74 +232,91 @@ class _ProfileScreenState extends State<ProfileScreen> {
     required String value,
     required Color color,
   }) {
-    return Card(
-      elevation: 2,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Icon(icon, color: color, size: 24),
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: AppPalette.cardBorder),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(7),
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(10),
             ),
-            const SizedBox(height: 12),
-            Text(
-              value,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: color,
-              ),
+            child: Icon(icon, color: color, size: 18),
+          ),
+          const SizedBox(height: 10),
+          Text(
+            value,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w900,
+              color: color,
             ),
-            Text(
-              label,
-              style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: AppPalette.textSecondary,
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
 
   Widget _buildInfoCard(BuildContext context, String email) {
-    return Card(
-      elevation: 2,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Información de la Cuenta',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppPalette.cardBorder),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Información de la Cuenta',
+            style: TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w800,
+              color: AppPalette.textPrimary,
             ),
-            const SizedBox(height: 16),
-            _buildInfoRow(
-              icon: Icons.email,
-              label: 'Correo electrónico',
-              value: email,
-            ),
-            const Divider(),
-            _buildInfoRow(
-              icon: Icons.calendar_today,
-              label: 'Miembro desde',
-              value: DateFormat('MMMM yyyy', 'es').format(DateTime.now()),
-            ),
-            const Divider(),
-            _buildInfoRow(
-              icon: Icons.verified_user,
-              label: 'Estado',
-              value: 'Activo',
-              valueColor: Colors.green,
-            ),
-          ],
-        ),
+          ),
+          const SizedBox(height: 14),
+          _buildInfoRow(
+            icon: Icons.email_outlined,
+            label: 'Correo',
+            value: email,
+          ),
+          const Divider(height: 20, color: AppPalette.cardBorder),
+          _buildInfoRow(
+            icon: Icons.calendar_today_outlined,
+            label: 'Fecha Actual',
+            value: DateFormat('d MMMM yyyy', 'es').format(DateTime.now()),
+          ),
+          const Divider(height: 20, color: AppPalette.cardBorder),
+          _buildInfoRow(
+            icon: Icons.cloud_done_outlined,
+            label: 'Sincronización Cloud',
+            value: 'Activa con Firebase',
+            valueColor: AppPalette.leaf,
+          ),
+        ],
       ),
     );
   }
@@ -252,69 +327,118 @@ class _ProfileScreenState extends State<ProfileScreen> {
     required String value,
     Color? valueColor,
   }) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Row(
-        children: [
-          Icon(icon, size: 20, color: Colors.grey[600]),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              label,
-              style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+    return Row(
+      children: [
+        Icon(icon, size: 18, color: AppPalette.cocoa),
+        const SizedBox(width: 12),
+        Text(
+          label,
+          style: const TextStyle(fontSize: 13, color: AppPalette.textSecondary),
+        ),
+        const Spacer(),
+        Flexible(
+          child: Text(
+            value,
+            textAlign: TextAlign.right,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+              color: valueColor ?? AppPalette.textPrimary,
             ),
           ),
-          Flexible(
-            child: Text(
-              value,
-              textAlign: TextAlign.right,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
-                color: valueColor,
-              ),
-            ),
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
-  Widget _buildActionsSection(BuildContext context) {
-    return Card(
-      elevation: 2,
+  Widget _buildActionsSection(BuildContext context, RecordsProvider provider) {
+    return Material(
+      color: Colors.white,
+      clipBehavior: Clip.antiAlias,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20),
+        side: const BorderSide(color: AppPalette.cardBorder),
+      ),
       child: Column(
         children: [
           ListTile(
             leading: Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: Colors.blue.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(8),
+                color: Colors.blue.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(10),
               ),
-              child: const Icon(Icons.lock, color: Colors.blue),
+              child: const Icon(Icons.lock_reset_rounded, color: Colors.blue, size: 20),
             ),
-            title: const Text('Cambiar Contraseña'),
-            subtitle: const Text('Restablecer tu contraseña'),
-            trailing: const Icon(Icons.chevron_right),
+            title: const Text(
+              'Cambiar Contraseña',
+              style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
+            ),
+            subtitle: const Text(
+              'Enviar correo para restablecer contraseña',
+              style: TextStyle(fontSize: 12),
+            ),
+            trailing: const Icon(Icons.chevron_right_rounded, color: AppPalette.textMuted),
             onTap: () => _showChangePasswordDialog(context),
           ),
-          const Divider(height: 1),
+          const Divider(height: 1, color: AppPalette.cardBorder),
+          ListTile(
+            leading: Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: AppPalette.caramel.withValues(alpha: 0.14),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Icon(Icons.picture_as_pdf_rounded, color: AppPalette.caramelDark, size: 20),
+            ),
+            title: const Text(
+              'Descargar Reporte Completo',
+              style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
+            ),
+            subtitle: const Text(
+              'Generar PDF con todo el historial de ventas',
+              style: TextStyle(fontSize: 12),
+            ),
+            trailing: const Icon(Icons.chevron_right_rounded, color: AppPalette.textMuted),
+            onTap: () async {
+              if (provider.records.isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('No hay ventas registradas para exportar')),
+                );
+                return;
+              }
+              await PdfService.generateReport(
+                title: 'Reporte Histórico Completo de Ventas',
+                records: provider.records,
+                startDate: DateTime(2020),
+                endDate: DateTime.now(),
+              );
+            },
+          ),
+          const Divider(height: 1, color: AppPalette.cardBorder),
           ListTile(
             leading: Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
                 color: Colors.red.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(10),
               ),
-              child: Icon(Icons.logout, color: Colors.red[700]),
+              child: Icon(Icons.logout_rounded, color: Colors.red.shade700, size: 20),
             ),
             title: Text(
               'Cerrar Sesión',
-              style: TextStyle(color: Colors.red[700]),
+              style: TextStyle(
+                color: Colors.red.shade700,
+                fontWeight: FontWeight.w700,
+                fontSize: 14,
+              ),
             ),
-            subtitle: const Text('Salir de tu cuenta'),
+            subtitle: const Text(
+              'Salir de tu cuenta en este dispositivo',
+              style: TextStyle(fontSize: 12),
+            ),
+            trailing: const Icon(Icons.chevron_right_rounded, color: AppPalette.textMuted),
             onTap: () => _showLogoutDialog(context),
           ),
         ],
@@ -323,25 +447,30 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Widget _buildAppInfo() {
-    return Card(
-      color: Colors.grey[100],
-      elevation: 0,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.coffee, color: Colors.brown[700], size: 24),
-            const SizedBox(width: 8),
-            Text(
-              'Koffee v1.0',
-              style: TextStyle(
-                color: Colors.grey[600],
-                fontWeight: FontWeight.w500,
-              ),
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 16),
+      alignment: Alignment.center,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(6),
+            decoration: BoxDecoration(
+              color: AppPalette.espresso.withValues(alpha: 0.1),
+              shape: BoxShape.circle,
             ),
-          ],
-        ),
+            child: const Icon(Icons.coffee_rounded, color: AppPalette.espresso, size: 16),
+          ),
+          const SizedBox(width: 8),
+          const Text(
+            'Koffee • Registro Cafetero v1.0.0',
+            style: TextStyle(
+              color: AppPalette.textMuted,
+              fontWeight: FontWeight.w600,
+              fontSize: 12,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -354,20 +483,28 @@ class _ProfileScreenState extends State<ProfileScreen> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Cambiar Contraseña'),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        title: const Row(
+          children: [
+            Icon(Icons.lock_reset_rounded, color: AppPalette.cocoa),
+            SizedBox(width: 10),
+            Text('Cambiar Contraseña', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
+          ],
+        ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
-              'Se enviará un enlace a tu correo electrónico para restablecer la contraseña.',
-              style: TextStyle(fontSize: 14),
+              'Se enviará un enlace a tu correo electrónico para restablecer de forma segura tu contraseña.',
+              style: TextStyle(fontSize: 13, color: AppPalette.textSecondary),
             ),
             const SizedBox(height: 16),
             TextField(
               controller: emailController,
               decoration: const InputDecoration(
-                labelText: 'Correo electrónico',
-                border: OutlineInputBorder(),
+                labelText: 'Correo Electrónico',
+                prefixIcon: Icon(Icons.email_outlined),
               ),
               enabled: false,
             ),
@@ -388,7 +525,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   Navigator.pop(ctx);
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
-                      content: Text('Correo de recuperación enviado'),
+                      content: Text('Correo de recuperación enviado con éxito'),
                     ),
                   );
                 }
@@ -412,14 +549,38 @@ class _ProfileScreenState extends State<ProfileScreen> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Cerrar Sesión'),
-        content: const Text('¿Estás seguro de que deseas cerrar sesión?'),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.red.shade50,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(
+                Icons.logout_rounded,
+                color: Colors.red.shade700,
+                size: 22,
+              ),
+            ),
+            const SizedBox(width: 12),
+            const Text(
+              'Cerrar Sesión',
+              style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18),
+            ),
+          ],
+        ),
+        content: const Text(
+          '¿Estás seguro de que deseas salir de tu cuenta de Koffee?',
+          style: TextStyle(color: AppPalette.textSecondary, fontSize: 14),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
             child: const Text('Cancelar'),
           ),
-          TextButton(
+          ElevatedButton(
             onPressed: () async {
               Navigator.pop(ctx);
               await AuthService.instance.signOut();
@@ -431,7 +592,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 );
               }
             },
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red.shade700,
+              foregroundColor: Colors.white,
+            ),
             child: const Text('Cerrar Sesión'),
           ),
         ],

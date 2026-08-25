@@ -23,9 +23,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MultiProvider(
-      providers: [
-        ChangeNotifierProvider(create: (_) => RecordsProvider()),
-      ],
+      providers: [ChangeNotifierProvider(create: (_) => RecordsProvider())],
       child: MaterialApp(
         title: 'Koffee',
         debugShowCheckedModeBanner: false,
